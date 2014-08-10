@@ -75,6 +75,11 @@ public final class Database implements StateMachine {
     public int hashCode() {
       return string.hashCode();
     }
+
+    @Override
+    public String toString() {
+      return string;
+    }
   }
 
   private class Terminator implements Callable<Void> {
@@ -143,12 +148,17 @@ public final class Database implements StateMachine {
     logMemberMap();
   }
 
-  public void deactivate(String memberName) {
+  public void deactivate(String memberName, String origin) {
     LOG.debug("Deactivating a session: member={}", memberName);
     Member member = memberMap.get(memberName);
     if (member == null) {
       LOG.warn("Got a deactivate command for a non-existent member: {}",
                memberName);
+      return;
+    }
+    if (!member.owner.equals(origin)) {
+      LOG.debug("Ignoring deactivate {} command from {}. Current owner is {}",
+                memberName, origin, member.owner);
       return;
     }
     Member newMember = new Member(member.name, member.owner, false);
@@ -209,8 +219,8 @@ public final class Database implements StateMachine {
   @Override
   public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId) {
     Command command = Serializer.deserialize(stateUpdate);
-    LOG.debug("Delivering a command: {} {}", zxid, command);
-    command.execute(this);
+    LOG.debug("Delivering a command: {} {} {}", zxid, command, clientId);
+    command.execute(this, clientId);
 
     if (clientId == null || !clientId.equals(this.serverId)) {
       return;

@@ -18,8 +18,8 @@ public final class DeactivateCommand implements Command, Serializable {
     this.member = member;
   }
 
-  public void execute(Database db) {
-    db.deactivate(member);
+  public void execute(Database db, String origin) {
+    db.deactivate(member, origin);
   }
 
   public String toString() {

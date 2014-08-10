@@ -19,7 +19,7 @@ public final class PutCommand implements Command, Serializable {
     this.owner = owner;
   }
 
-  public void execute(Database db) {
+  public void execute(Database db, String origin) {
     db.put(member, owner);
   }
 
