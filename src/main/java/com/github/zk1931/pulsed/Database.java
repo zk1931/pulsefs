@@ -1,7 +1,5 @@
 package com.github.zk1931.pulsed;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -10,8 +8,15 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.zab.QuorumZab;
@@ -30,11 +35,69 @@ public final class Database implements StateMachine {
 
   private String serverId;
 
-  private ConcurrentSkipListMap<String, byte[]> kvstore =
-    new ConcurrentSkipListMap<>();
-
   private LinkedBlockingQueue<AsyncContext> pending =
     new LinkedBlockingQueue<>();
+
+  private ExecutorService fixedPool = Executors.newFixedThreadPool(1);
+
+  private static class DelayedString implements Delayed,
+                                                Comparable<Delayed> {
+    final String string;
+    final long delayNs;
+
+    public DelayedString(String string, long delaySec) {
+      this.string = string;
+      this.delayNs = System.nanoTime() + delaySec * 1000 * 1000 * 1000;
+    }
+
+    @Override
+    public int compareTo(Delayed that) {
+      long diff = this.getDelay(TimeUnit.NANOSECONDS) -
+                  that.getDelay(TimeUnit.NANOSECONDS);
+      return (diff == 0) ? 0 : (diff < 0) ? -1 : 1;
+    }
+
+    @Override
+    public long getDelay(TimeUnit unit) {
+      return unit.convert(delayNs - System.nanoTime(), TimeUnit.NANOSECONDS);
+    }
+
+    @Override
+    public boolean equals(Object obj){
+      if(obj instanceof DelayedString) {
+        DelayedString that = (DelayedString)obj;
+        return this.string.equals(that.string);
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return string.hashCode();
+    }
+  }
+
+  private static class Terminator implements Callable<Void> {
+    private DelayQueue<DelayedString> memberQueue;
+
+    public Terminator(DelayQueue<DelayedString> memberQueue) {
+      this.memberQueue = memberQueue;
+    }
+
+    public Void call() throws Exception {
+      while (true) {
+        DelayedString expired = memberQueue.take();
+        LOG.debug("Expired: {}", expired.string);
+      }
+    }
+  }
+
+  // transient state
+  private DelayQueue<DelayedString> ownedMembers = new DelayQueue<>();
+  private Future<Void> terminatorFuture;
+
+  // persistent state
+  private Map<String, Member> memberMap = new ConcurrentHashMap<>();
 
   public Database() {
     try {
@@ -59,33 +122,23 @@ public final class Database implements StateMachine {
       }
       zab = new QuorumZab(this, prop);
       this.serverId = zab.getServerId();
+      terminatorFuture = fixedPool.submit(new Terminator(ownedMembers));
     } catch (IOException|InterruptedException ex) {
       LOG.error("Caught exception : ", ex);
       throw new RuntimeException();
     }
   }
 
-  public byte[] get(String key) {
-    return (byte[])kvstore.get((Object)key);
-  }
-
-  public byte[] put(String key, byte[] value) {
-    return kvstore.put(key, value);
-  }
-
-  public byte[] getAll() throws IOException {
-    Iterator<Map.Entry<String, byte[]>> iter = kvstore.entrySet()
-                                                      .iterator();
-    ByteArrayOutputStream bout = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(bout);
-    while(iter.hasNext()) {
-      Map.Entry<String, byte[]> entry = iter.next();
-      out.writeChars(entry.getKey());
-      out.writeChars(" : ");
-      out.write(entry.getValue());
-      out.writeChars("\n");
+  public void put(String member, String owner) {
+    LOG.debug("Activating a session: member={}, owner={}", member, owner);
+    if (owner.equals(this.serverId)) {
+      DelayedString newTimeout = new DelayedString(member, 10);
+      // This member might be alreadly in the queue if the client sends requests
+      // concurrently.
+      ownedMembers.remove(newTimeout);
+      ownedMembers.add(newTimeout);
     }
-    return bout.toByteArray();
+    memberMap.put(member, new Member(member, owner, true));
   }
 
   /**
@@ -94,11 +147,12 @@ public final class Database implements StateMachine {
    * This method must be synchronized to ensure that the requests are sent to
    * Zab in the same order they get enqueued to the pending queue.
    */
-  public synchronized boolean add(PutCommand command, AsyncContext context) {
+  public synchronized boolean add(String member, AsyncContext context) {
     if (!pending.add(context)) {
       return false;
     }
     try {
+      PutCommand command = new PutCommand(member, serverId);
       ByteBuffer bb = command.toByteBuffer();
       LOG.debug("Sending a message: {}", bb);
       zab.send(command.toByteBuffer());
@@ -110,7 +164,6 @@ public final class Database implements StateMachine {
 
   @Override
   public ByteBuffer preprocess(Zxid zxid, ByteBuffer message) {
-    LOG.debug("Preprocessing a message: {}", message);
     return message;
   }
 
@@ -177,5 +230,16 @@ public final class Database implements StateMachine {
   @Override
   public void clusterChange(Set<String> members) {
     LOG.debug("Cluster changed: {}.", members);
+  }
+
+  public boolean touch(String member, int timeoutSec) {
+    LOG.debug("Current owned members: {}", ownedMembers);
+    DelayedString newTimeout = new DelayedString(member, timeoutSec);
+    if (ownedMembers.remove(newTimeout)) {
+      ownedMembers.add(newTimeout);
+      LOG.debug("Session {} renewed for {} seconds", member, timeoutSec);
+      return true;
+    }
+    return false;
   }
 }
