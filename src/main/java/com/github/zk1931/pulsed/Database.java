@@ -153,9 +153,8 @@ public final class Database implements StateMachine {
     }
     try {
       PutCommand command = new PutCommand(member, serverId);
-      ByteBuffer bb = command.toByteBuffer();
-      LOG.debug("Sending a message: {}", bb);
-      zab.send(command.toByteBuffer());
+      ByteBuffer bb = Serializer.serialize(command);
+      zab.send(bb);
     } catch (IOException ex) {
       throw new RuntimeException();
     }
@@ -170,7 +169,7 @@ public final class Database implements StateMachine {
   @Override
   public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId) {
     LOG.debug("Received a message: {}", stateUpdate);
-    PutCommand command = PutCommand.fromByteBuffer(stateUpdate);
+    Command command = Serializer.deserialize(stateUpdate);
     LOG.debug("Delivering a command: {} {}", zxid, command);
     command.execute(this);
 
