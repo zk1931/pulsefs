@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ "$#" -le 1 ]; then
+  echo "usage: $0 http-port [-DserverId=host:port] [-Djoin=host:port] [-Dlogdir=host:port]"
+  exit 1
+fi
+
+mvn compile ${2} ${3} -e exec:java -Dexec.args="$1"
