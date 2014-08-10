@@ -17,4 +17,9 @@ public final class Member {
     this.owner = owner;
     this.isActive = isActive;
   }
+
+  public String toString() {
+    return String.format("Member:name=%s,owner=%s,active=%b", name, owner,
+                         isActive);
+  }
 }
