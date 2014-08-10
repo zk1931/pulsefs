@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 public final class RequestHandler extends HttpServlet {
   private static final Logger LOG =
       LoggerFactory.getLogger(RequestHandler.class);
+  private static final long serialVersionUID = 0L;
 
   private Database db = new Database();
 
@@ -55,8 +56,31 @@ public final class RequestHandler extends HttpServlet {
       return;
     }
     byte[] value = new byte[length];
-    request.getInputStream().read(value);
+    int bytesRead = request.getInputStream().read(value);
+    if (bytesRead != length) {
+      LOG.debug("lengths mismatch: content length: {}, bytes read: {}",
+                length, bytesRead);
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      response.setContentLength(0);
+      return;
+    }
     PutCommand command = new PutCommand(key, value);
     db.add(command, context);
+  }
+
+  /**
+   * "Disables" serializable.
+   */
+  private void writeObject(java.io.ObjectOutputStream stream)
+      throws IOException {
+    throw new java.io.NotSerializableException(getClass().getName());
+  }
+
+  /**
+   * "Disables" serializable.
+   */
+  private void readObject(java.io.ObjectInputStream stream)
+      throws IOException, ClassNotFoundException {
+    throw new java.io.NotSerializableException(getClass().getName());
   }
 }

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class PutCommand implements Serializable {
   private static final Logger LOG = LoggerFactory.getLogger(PutCommand.class);
+  private static final long serialVersionUID = 0L;
 
   private final String key;
 
@@ -22,7 +24,7 @@ public final class PutCommand implements Serializable {
 
   public PutCommand(String key, byte[] value) {
     this.key = key;
-    this.value = value;
+    this.value = value.clone();
   }
 
   public void execute(Database db) {
@@ -51,6 +53,12 @@ public final class PutCommand implements Serializable {
   }
 
   public String toString() {
-    return String.format("PUT key='%s', value='%s'", key, new String(value));
+    String val;
+    try {
+      val = new String(value, "UTF-8");
+    } catch (UnsupportedEncodingException ex) {
+      val = "";
+    }
+    return String.format("PUT key='%s', value='%s'", key, val);
   }
 }
