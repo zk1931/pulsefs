@@ -59,7 +59,7 @@ public final class Database implements StateMachine {
       }
       zab = new QuorumZab(this, prop);
       this.serverId = zab.getServerId();
-    } catch (Exception ex) {
+    } catch (IOException|InterruptedException ex) {
       LOG.error("Caught exception : ", ex);
       throw new RuntimeException();
     }
@@ -151,6 +151,7 @@ public final class Database implements StateMachine {
   public void recovering() {
     // If it's LOOKING state. Reply all pending request with 503 clear
     // pending queue.
+    LOG.debug("Recovering");
     Iterator<AsyncContext> iter = pending.iterator();
     while (iter.hasNext()) {
       AsyncContext context = iter.next();
@@ -165,14 +166,16 @@ public final class Database implements StateMachine {
 
   @Override
   public void leading(Set<String> activeFollowers) {
+    LOG.debug("Leading {}", activeFollowers);
   }
 
   @Override
   public void following(String leader) {
+    LOG.debug("Following {}", leader);
   }
 
   @Override
   public void clusterChange(Set<String> members) {
-    LOG.debug("Number of members in cluster : {}.", members.size());
+    LOG.debug("Cluster changed: {}.", members);
   }
 }
