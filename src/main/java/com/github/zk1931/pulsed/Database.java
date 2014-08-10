@@ -5,11 +5,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.ExecutorService;
@@ -77,7 +77,7 @@ public final class Database implements StateMachine {
     }
   }
 
-  private static class Terminator implements Callable<Void> {
+  private class Terminator implements Callable<Void> {
     private DelayQueue<DelayedString> memberQueue;
 
     public Terminator(DelayQueue<DelayedString> memberQueue) {
@@ -86,8 +86,9 @@ public final class Database implements StateMachine {
 
     public Void call() throws Exception {
       while (true) {
-        DelayedString expired = memberQueue.take();
-        LOG.debug("Expired: {}", expired.string);
+        String memberName = memberQueue.take().string;
+        LOG.debug("Expired: {}", memberName);
+        sendDeactivate(memberName);
       }
     }
   }
@@ -97,7 +98,7 @@ public final class Database implements StateMachine {
   private Future<Void> terminatorFuture;
 
   // persistent state
-  private Map<String, Member> memberMap = new ConcurrentHashMap<>();
+  private ConcurrentMap<String, Member> memberMap = new ConcurrentHashMap<>();
 
   public Database() {
     try {
@@ -139,6 +140,29 @@ public final class Database implements StateMachine {
       ownedMembers.add(newTimeout);
     }
     memberMap.put(member, new Member(member, owner, true));
+    logMemberMap();
+  }
+
+  public void deactivate(String memberName) {
+    LOG.debug("Deactivating a session: member={}", memberName);
+    Member member = memberMap.get(memberName);
+    if (member == null) {
+      LOG.warn("Got a deactivate command for a non-existent member: {}",
+               memberName);
+      return;
+    }
+    Member newMember = new Member(member.name, member.owner, false);
+    if (!memberMap.replace(memberName, member, newMember)) {
+      LOG.warn("Failed to update the member map for: {}", memberName);
+      return;
+    }
+    logMemberMap();
+  }
+
+  private void logMemberMap() {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Current member map: {}", memberMap);
+    }
   }
 
   /**
@@ -161,6 +185,22 @@ public final class Database implements StateMachine {
     return true;
   }
 
+  /**
+   * Send a request to deactivate a member.
+   *
+   * @param member member to deactivate
+   */
+  public boolean sendDeactivate(String member) {
+    try {
+      DeactivateCommand command = new DeactivateCommand(member);
+      ByteBuffer bb = Serializer.serialize(command);
+      zab.send(bb);
+    } catch (IOException ex) {
+      throw new RuntimeException();
+    }
+    return true;
+  }
+
   @Override
   public ByteBuffer preprocess(Zxid zxid, ByteBuffer message) {
     return message;
@@ -168,7 +208,6 @@ public final class Database implements StateMachine {
 
   @Override
   public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId) {
-    LOG.debug("Received a message: {}", stateUpdate);
     Command command = Serializer.deserialize(stateUpdate);
     LOG.debug("Delivering a command: {} {}", zxid, command);
     command.execute(this);
