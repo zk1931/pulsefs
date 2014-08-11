@@ -13,16 +13,19 @@ public final class DeactivateCommand implements Command, Serializable {
   private static final long serialVersionUID = 0L;
 
   final String member;
+  final String owner;
 
-  public DeactivateCommand(String member) {
+  public DeactivateCommand(String member, String owner) {
     this.member = member;
+    this.owner = owner;
   }
 
-  public void execute(Database db, String origin) {
-    db.deactivate(member, origin);
+  public void execute(Database db) {
+    db.deactivate(member, owner);
   }
 
   public String toString() {
-    return String.format("Deactivate command: member=%s", member);
+    return String.format("Deactivate command: member=%s, owner=%s",
+                         member, owner);
   }
 }
