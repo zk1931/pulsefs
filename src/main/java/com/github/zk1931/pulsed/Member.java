@@ -8,18 +8,15 @@ import org.slf4j.LoggerFactory;
  */
 public final class Member {
   private static final Logger LOG = LoggerFactory.getLogger(Member.class);
-  final String name;
   final String owner;
-  final boolean isActive;
+  final boolean active;
 
-  public Member(String name, String owner, boolean isActive) {
-    this.name = name;
+  public Member(String owner, boolean active) {
     this.owner = owner;
-    this.isActive = isActive;
+    this.active = active;
   }
 
   public String toString() {
-    return String.format("Member:name=%s,owner=%s,active=%b", name, owner,
-                         isActive);
+    return String.format("Member:owner=%s,active=%b", owner, active);
   }
 }

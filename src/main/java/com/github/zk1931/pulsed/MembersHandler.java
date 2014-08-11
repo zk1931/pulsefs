@@ -46,10 +46,12 @@ public final class MembersHandler extends HttpServlet {
       response.setStatus(HttpServletResponse.SC_NOT_FOUND);
       response.setContentLength(0);
     } else if (key.isEmpty()) {
-      // TODO list members
-      response.setContentType("text/html");
+      // TODO handle read requests and write requests in a same thread?
+      String json = db.getMembers();
+      response.setContentType("application/json");
+      response.setContentLength(json.length());
       response.setStatus(HttpServletResponse.SC_OK);
-      response.setContentLength(0);
+      response.getOutputStream().print(json);
     } else if (db.touch(key, 10)) {
       // session renewed.
       response.setContentType("text/html");
