@@ -16,7 +16,11 @@ public final class MembersHandler extends HttpServlet {
       LoggerFactory.getLogger(MembersHandler.class);
   private static final long serialVersionUID = 0L;
 
-  private Database db = new Database();
+  private Database db;
+
+  public MembersHandler(Database db) {
+    this.db = db;
+  }
 
   @Override
   protected void service(HttpServletRequest request,
