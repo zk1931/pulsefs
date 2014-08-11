@@ -62,6 +62,7 @@ public final class Database implements StateMachine {
 
   // persistent state
   private ConcurrentMap<String, Member> memberMap = new ConcurrentHashMap<>();
+  private ConcurrentMap<String, Group> groupMap = new ConcurrentHashMap<>();
 
   public Database() {
     try {
@@ -102,7 +103,14 @@ public final class Database implements StateMachine {
       ownedMembers.remove(newMember);
       ownedMembers.add(newMember);
     }
+    Member currentMember = memberMap.get(member);
+    if (currentMember != null) {
+      newMember.groups.addAll(currentMember.groups);
+    }
     memberMap.put(member, newMember);
+    for (String group : newMember.groups) {
+      groupMap.get(group).members.put(member, newMember);
+    }
     logMemberMap();
   }
 
@@ -120,10 +128,14 @@ public final class Database implements StateMachine {
       return;
     }
     Member newMember = new Member(member.name, member.owner, false, 10);
+    newMember.groups.addAll(member.groups);
     ownedMembers.remove(newMember);
     if (!memberMap.replace(memberName, member, newMember)) {
       LOG.warn("Failed to update the member map for: {}", memberName);
       return;
+    }
+    for (String group : newMember.groups) {
+      groupMap.get(group).members.put(memberName, newMember);
     }
     logMemberMap();
   }
@@ -152,6 +164,43 @@ public final class Database implements StateMachine {
       throw new RuntimeException();
     }
     return true;
+  }
+
+  /**
+   * Send a request to join a group.
+   *
+   * This method must be synchronized to ensure that the requests are sent to
+   * Zab in the same order they get enqueued to the pending queue.
+   */
+  public synchronized boolean sendJoin(String member, String group,
+                                       AsyncContext context) {
+    if (!pending.add(context)) {
+      return false;
+    }
+    try {
+      JoinCommand command = new JoinCommand(member, group);
+      ByteBuffer bb = Serializer.serialize(command);
+      zab.send(bb);
+    } catch (IOException ex) {
+      throw new RuntimeException();
+    }
+    return true;
+  }
+
+  public void join(String member, String group) {
+    LOG.debug("Joining a group: member={}, group={}", member, group);
+    Group newGroup = new Group();
+    Member newMember = memberMap.get(member);
+    if (newMember == null) {
+      newMember = new Member(member, serverId, false, 10);
+      memberMap.put(member, newMember);
+    }
+    newMember.groups.add(group);
+    newGroup.members.put(member, newMember);
+    Group currentGroup = groupMap.putIfAbsent(group, newGroup);
+    if (currentGroup != null) {
+      currentGroup.members.put(member, newMember);
+    }
   }
 
   /**
@@ -258,4 +307,14 @@ public final class Database implements StateMachine {
     LOG.debug("Listing members: {}", json);
     return json;
   }
+
+  public String getGroups() {
+    GsonBuilder builder = new GsonBuilder();
+    builder.excludeFieldsWithoutExposeAnnotation();
+    Gson gson = builder.create();
+    String json = gson.toJson(groupMap);
+    LOG.debug("Listing groups: {}", json);
+    return json;
+  }
+
 }

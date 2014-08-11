@@ -1,6 +1,7 @@
 package com.github.zk1931.pulsed;
 
 import com.google.gson.annotations.Expose;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -15,19 +16,18 @@ public final class Member implements Delayed, Comparable<Delayed> {
   @Expose final String owner;
   @Expose final boolean active;
   @Expose(serialize = false) final long delayNs;
+  @Expose final CopyOnWriteArrayList<String> groups;
 
   public Member(String name, String owner, boolean active, long delaySec) {
     this.name = name;
     this.owner = owner;
     this.active = active;
     this.delayNs = System.nanoTime() + delaySec * 1000 * 1000 * 1000;
+    this.groups = new CopyOnWriteArrayList<>();
   }
 
   public Member(String name, long delaySec) {
-    this.name = name;
-    this.owner = "";
-    this.active = false;
-    this.delayNs = System.nanoTime() + delaySec * 1000 * 1000 * 1000;
+    this(name, "", false, delaySec);
   }
 
   @Override
