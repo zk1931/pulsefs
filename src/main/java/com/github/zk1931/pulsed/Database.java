@@ -1,5 +1,6 @@
 package com.github.zk1931.pulsed;
 
+import com.google.gson.Gson;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -144,7 +145,7 @@ public final class Database implements StateMachine {
       ownedMembers.remove(newTimeout);
       ownedMembers.add(newTimeout);
     }
-    memberMap.put(member, new Member(member, owner, true));
+    memberMap.put(member, new Member(owner, true));
     logMemberMap();
   }
 
@@ -161,7 +162,7 @@ public final class Database implements StateMachine {
                 memberName, origin, member.owner);
       return;
     }
-    Member newMember = new Member(member.name, member.owner, false);
+    Member newMember = new Member(member.owner, false);
     if (!memberMap.replace(memberName, member, newMember)) {
       LOG.warn("Failed to update the member map for: {}", memberName);
       return;
@@ -289,5 +290,12 @@ public final class Database implements StateMachine {
       return true;
     }
     return false;
+  }
+
+  public String getMembers() {
+    Gson gson = new Gson();
+    String json = gson.toJson(memberMap);
+    LOG.debug("Listing members: {}", json);
+    return json;
   }
 }
