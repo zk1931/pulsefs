@@ -65,33 +65,28 @@ public final class Database implements StateMachine {
   private ConcurrentMap<String, Group> groupMap = new ConcurrentHashMap<>();
 
   public Database() {
-    try {
-      String selfId = System.getProperty("serverId");
-      String logDir = System.getProperty("logdir");
-      String joinPeer = System.getProperty("join");
+    String selfId = System.getProperty("serverId");
+    String logDir = System.getProperty("logdir");
+    String joinPeer = System.getProperty("join");
 
-      if (selfId != null && joinPeer == null) {
-        joinPeer = selfId;
-      }
-
-      Properties prop = new Properties();
-      if (selfId != null) {
-        prop.setProperty("serverId", selfId);
-        prop.setProperty("logdir", selfId);
-      }
-      if (joinPeer != null) {
-        prop.setProperty("joinPeer", joinPeer);
-      }
-      if (logDir != null) {
-        prop.setProperty("logdir", logDir);
-      }
-      zab = new QuorumZab(this, prop);
-      this.serverId = zab.getServerId();
-      terminatorFuture = fixedPool.submit(new Terminator(ownedMembers));
-    } catch (IOException|InterruptedException ex) {
-      LOG.error("Caught exception : ", ex);
-      throw new RuntimeException();
+    if (selfId != null && joinPeer == null) {
+      joinPeer = selfId;
     }
+
+    Properties prop = new Properties();
+    if (selfId != null) {
+      prop.setProperty("serverId", selfId);
+      prop.setProperty("logdir", selfId);
+    }
+    if (joinPeer != null) {
+      prop.setProperty("joinPeer", joinPeer);
+    }
+    if (logDir != null) {
+      prop.setProperty("logdir", logDir);
+    }
+    zab = new QuorumZab(this, prop);
+    this.serverId = zab.getServerId();
+    terminatorFuture = fixedPool.submit(new Terminator(ownedMembers));
   }
 
   public void put(String member, String owner) {
