@@ -1,8 +1,3 @@
 #!/bin/bash
 
-if [ "$#" -le 1 ]; then
-  echo "usage: $0 http-port [-DserverId=host:port] [-Djoin=host:port] [-Dlogdir=host:port]"
-  exit 1
-fi
-
-mvn compile ${2} ${3} -e exec:java -Dexec.args="$1"
+java -cp ./bin/pulsed-jar-with-dependencies.jar com.github.zk1931.pulsed.Main "$@"

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,19 +18,22 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.zab.QuorumZab;
-import org.apache.zab.StateMachine;
-import org.apache.zab.Zxid;
+import com.github.zk1931.jzab.PendingRequests;
+import com.github.zk1931.jzab.StateMachine;
+import com.github.zk1931.jzab.Zab;
+import com.github.zk1931.jzab.ZabConfig;
+import com.github.zk1931.jzab.ZabException;
+import com.github.zk1931.jzab.Zxid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * state machine.
+ * State machine.
  */
 public final class Database implements StateMachine {
   private static final Logger LOG = LoggerFactory.getLogger(Database.class);
 
-  private QuorumZab zab;
+  private Zab zab;
 
   private String serverId;
 
@@ -64,27 +66,21 @@ public final class Database implements StateMachine {
   private ConcurrentMap<String, Member> memberMap = new ConcurrentHashMap<>();
   private ConcurrentMap<String, Group> groupMap = new ConcurrentHashMap<>();
 
-  public Database() {
-    String selfId = System.getProperty("serverId");
-    String logDir = System.getProperty("logdir");
-    String joinPeer = System.getProperty("join");
-
-    if (selfId != null && joinPeer == null) {
-      joinPeer = selfId;
+  public Database(String serverId, String joinPeer, String logDir) {
+    this.serverId = serverId;
+    if (this.serverId != null && joinPeer == null) {
+      joinPeer = this.serverId;
     }
-
-    Properties prop = new Properties();
-    if (selfId != null) {
-      prop.setProperty("serverId", selfId);
-      prop.setProperty("logdir", selfId);
+    ZabConfig config = new ZabConfig();
+    if (logDir == null) {
+      config.setLogDir(this.serverId);
     }
     if (joinPeer != null) {
-      prop.setProperty("joinPeer", joinPeer);
+      zab = new Zab(this, config, this.serverId, joinPeer);
+    } else {
+      // Recovers from log directory.
+      zab = new Zab(this, config);
     }
-    if (logDir != null) {
-      prop.setProperty("logdir", logDir);
-    }
-    zab = new QuorumZab(this, prop);
     this.serverId = zab.getServerId();
     terminatorFuture = fixedPool.submit(new Terminator(ownedMembers));
   }
@@ -154,7 +150,9 @@ public final class Database implements StateMachine {
     try {
       PutCommand command = new PutCommand(member, serverId);
       ByteBuffer bb = Serializer.serialize(command);
-      zab.send(bb);
+      zab.send(bb, null);
+    } catch (ZabException ex) {
+      throw new RuntimeException();
     } catch (IOException ex) {
       throw new RuntimeException();
     }
@@ -175,7 +173,9 @@ public final class Database implements StateMachine {
     try {
       JoinCommand command = new JoinCommand(member, group);
       ByteBuffer bb = Serializer.serialize(command);
-      zab.send(bb);
+      zab.send(bb, null);
+    } catch (ZabException ex) {
+      throw new RuntimeException();
     } catch (IOException ex) {
       throw new RuntimeException();
     }
@@ -207,7 +207,9 @@ public final class Database implements StateMachine {
     try {
       DeactivateCommand command = new DeactivateCommand(member, serverId);
       ByteBuffer bb = Serializer.serialize(command);
-      zab.send(bb);
+      zab.send(bb, null);
+    } catch (ZabException ex) {
+      throw new RuntimeException();
     } catch (IOException ex) {
       throw new RuntimeException();
     }
@@ -220,7 +222,8 @@ public final class Database implements StateMachine {
   }
 
   @Override
-  public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId) {
+  public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId,
+                      Object ctx) {
     Command command = Serializer.deserialize(stateUpdate);
     LOG.debug("Delivering a command: {} {} {}", zxid, command, clientId);
     command.execute(this);
@@ -242,17 +245,28 @@ public final class Database implements StateMachine {
   }
 
   @Override
-  public void getState(OutputStream os) {
+  public void removed(String peerId, Object ctx) {
+  }
+
+  @Override
+  public void flushed(ByteBuffer request, Object ctx) {
+  }
+
+  @Override
+  public void save(OutputStream os) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void setState(InputStream is) {
+  public void restore(InputStream is) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void recovering() {
+  public void snapshotDone(String fileName, Object ctx) {}
+
+  @Override
+  public void recovering(PendingRequests pendingRequests) {
     // If it's LOOKING state. Reply all pending request with 503 clear
     // pending queue.
     LOG.debug("Recovering");
@@ -269,18 +283,13 @@ public final class Database implements StateMachine {
   }
 
   @Override
-  public void leading(Set<String> activeFollowers) {
+  public void leading(Set<String> activeFollowers, Set<String> clusterConfig) {
     LOG.debug("Leading {}", activeFollowers);
   }
 
   @Override
-  public void following(String leader) {
+  public void following(String leader, Set<String> clusterConfig) {
     LOG.debug("Following {}", leader);
-  }
-
-  @Override
-  public void clusterChange(Set<String> members) {
-    LOG.debug("Cluster changed: {}.", members);
   }
 
   public boolean touch(String member, int timeoutSec) {
@@ -311,5 +320,4 @@ public final class Database implements StateMachine {
     LOG.debug("Listing groups: {}", json);
     return json;
   }
-
 }
