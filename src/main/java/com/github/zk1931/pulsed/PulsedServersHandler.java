@@ -17,7 +17,11 @@
 
 package com.github.zk1931.pulsed;
 
+import com.github.zk1931.jzab.ZabException;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,16 +31,16 @@ import org.slf4j.LoggerFactory;
 /**
  * Handler for processing the requests for Pulsed server configuration.
  */
-public final class PulsedHandler extends BaseHandler {
+public final class PulsedServersHandler extends BaseHandler {
 
   private static final long serialVersionUID = 0L;
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(PulsedHandler.class);
+      LoggerFactory.getLogger(PulsedServersHandler.class);
 
   private final Pulsed pd;
 
-  PulsedHandler(Pulsed pd) {
+  PulsedServersHandler(Pulsed pd) {
     this.pd = pd;
   }
 
@@ -44,18 +48,37 @@ public final class PulsedHandler extends BaseHandler {
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     LOG.info("Get");
+    HashMap<String, Object> resp = new HashMap<>();
+    resp.put("leader", this.pd.getLeader());
+    if (this.pd.isLeader()) {
+      resp.put("active_members", this.pd.getActiveMembers());
+      resp.put("cluster_members", this.pd.getClusterMembers());
+    } else {
+      resp.put("cluster_members", this.pd.getClusterMembers());
+    }
+    String content = toJson(resp);
     response.setContentType("text/html");
     response.setStatus(HttpServletResponse.SC_OK);
-    response.setContentLength(0);
+    response.setContentLength(content.length());
+    response.getOutputStream()
+            .write(content.getBytes(Charset.forName("UTF-8")));
   }
 
   @Override
-  protected void doPut(HttpServletRequest request, HttpServletResponse response)
+  protected void doDelete(HttpServletRequest request,
+                          HttpServletResponse response)
       throws ServletException, IOException {
-    LOG.info("Put");
-    response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    response.setContentLength(0);
+    String peerId = request.getPathInfo().substring(1);
+    if (!this.pd.getClusterMembers().contains(peerId)) {
+      badRequest(response);
+    } else {
+      AsyncContext context = request.startAsync(request, response);
+      try {
+        this.pd.removePeer(peerId, context);
+      } catch (ZabException ex) {
+        serviceUnavailable(response, context);
+      }
+    }
   }
 
   /**

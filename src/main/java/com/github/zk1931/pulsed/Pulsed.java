@@ -4,10 +4,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Set;
+import javax.servlet.AsyncContext;
+import javax.servlet.http.HttpServletResponse;
 import com.github.zk1931.jzab.PendingRequests;
 import com.github.zk1931.jzab.StateMachine;
 import com.github.zk1931.jzab.Zab;
 import com.github.zk1931.jzab.ZabConfig;
+import com.github.zk1931.jzab.ZabException;
 import com.github.zk1931.jzab.Zxid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +23,9 @@ public final class Pulsed {
   private final Zab zab;
   private String serverId;
   private final PulsedStateMachine stateMachine = new PulsedStateMachine();
+  private Set<String> activeMembers;
+  private Set<String> clusterMembers;
+  private String leader;
 
   public Pulsed(String serverId, String joinPeer, String logDir) {
     this.serverId = serverId;
@@ -39,10 +45,30 @@ public final class Pulsed {
     this.serverId = zab.getServerId();
   }
 
+  public boolean isLeader() {
+    return this.leader.equals(this.serverId);
+  }
+
+  public Set<String> getActiveMembers() {
+    return this.activeMembers;
+  }
+
+  public Set<String> getClusterMembers() {
+    return this.clusterMembers;
+  }
+
+  public String getLeader() {
+    return this.leader;
+  }
+
+  public void removePeer(String peerId, Object ctx) throws ZabException {
+    this.zab.remove(peerId, ctx);
+  }
+
   /**
    * State machine of Pulsed.
    */
-  static class PulsedStateMachine implements StateMachine {
+  class PulsedStateMachine implements StateMachine {
     @Override
     public ByteBuffer preprocess(Zxid zxid, ByteBuffer message) {
       return message;
@@ -55,6 +81,12 @@ public final class Pulsed {
 
     @Override
     public void removed(String peerId, Object ctx) {
+      AsyncContext context = (AsyncContext)ctx;
+      HttpServletResponse response =
+        (HttpServletResponse)(context.getResponse());
+      response.setContentType("text/html");
+      response.setStatus(HttpServletResponse.SC_OK);
+      context.complete();
     }
 
     @Override
@@ -76,17 +108,25 @@ public final class Pulsed {
 
     @Override
     public void recovering(PendingRequests pendingRequests) {
+      LOG.info("Recovering");
     }
 
     @Override
-    public void leading(Set<String> activeFollowers,
+    public void leading(Set<String> activePeers,
                         Set<String> clusterConfig) {
-      LOG.debug("Leading {}", activeFollowers);
+      LOG.info("Leading with active members : {}, cluster members :{}",
+                activePeers, clusterConfig);
+      leader = serverId;
+      activeMembers = activePeers;
+      clusterMembers = clusterConfig;
     }
 
     @Override
-    public void following(String leader, Set<String> clusterConfig) {
-      LOG.debug("Following {}", leader);
+    public void following(String leaderId, Set<String> clusterConfig) {
+      LOG.info("Following with leader {}, cluster members :{}",
+                leaderId, clusterConfig);
+      leader = leaderId;
+      clusterMembers = clusterConfig;
     }
   }
 }
