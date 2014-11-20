@@ -16,6 +16,23 @@ pulsed until they explicitly get deleted by the user. Each ephemeral file is
 associated with a session, and it gets deleted automatically when the session
 expires.
 
+Files and directories are versioned. When a new file gets created, its version
+is zero. File version gets incremented when the file gets modified.
+
+When a new directory gets created, its version is zero. Directory version gets
+incremented whenever there is a change in the content of the directory.
+Specifically:
+
+- A new file gets created in the directory tree.
+- A file in the directory tree gets modified.
+- A file in the directory tree gets deleted.
+- A new directory gets created in the directory tree.
+- A directory in the directory tree gets deleted.
+
+A special version -1 indicates that a file or a directory does not exist. This
+special version is used for file/directory creation as well as watching for file
+/directory creation/deletion as described later.
+
 A special directory `/pulsed` is reserved for use by pulsed.
 
 creating a new regular file
@@ -60,13 +77,32 @@ creating a new regular directory
     version: 0
     content-length: 0
 
+creating a new regular file and all its parent directories
+---------------------------
+
+    PUT /foo/bar/newfile HTTP/1.1
+    content-length: 13
+
+    Hello, world!
+
+    HTTP/1.1 400 Bad Request
+    content-length: 45
+
+    { "error": "Directory /foo does not exist." }
+
+    PUT /foo/bar/newfile?recursive HTTP/1.1
+    content-length: 13
+
+    Hello, world!
+
+    HTTP/1.1 200 OK
+    version: 0
+    content-length: 0
+
 creating a new transient directory
 ----------------------------------
 
-Transient directories get created implicitly when you create a file in a
-non-existing location.
-
-    PUT /foo/bar/file HTTP/1.1
+    PUT /foo/bar/file?recursive&transient HTTP/1.1
     content-length: 13
 
     Hello, world!
@@ -91,7 +127,7 @@ sending POST requests to directories.
     First
 
     HTTP/1.1 200 OK
-    location: /foo/bar/dir/0000000000000000
+    location: /foo/bar/dir/0000000000000001
     version: 0
     content-length: 0
 
@@ -101,13 +137,35 @@ sending POST requests to directories.
     Second
 
     HTTP/1.1 200 OK
-    location: /foo/bar/dir/0000000000000001
+    location: /foo/bar/dir/0000000000000002
     version: 0
     content-length: 0
 
 listing a directory
 -------------------
-TBD
+
+    GET /foo/bar/dir HTTP/1.1
+
+    HTTP/1.1 200 OK
+    version: 2
+
+    {
+      "contents": [
+        {
+          "path": "/foo/bar/dir/0000000000000001",
+          "type": "file"
+          "version": 0
+        },
+        {
+          "path": "/foo/bar/dir/0000000000000002",
+          "type": "file"
+          "version": 0
+        }
+      ]
+    }
+
+TODO: add recursive listing
+TODO: add dump option to dump file contents.
 
 deleting a directory
 --------------------
@@ -125,9 +183,24 @@ a directory recursively:
     HTTP/1.1 200 OK
     content-length: 0
 
-watching a file or a directory
+waiting for a change in a file or a directory
 ------------------------------
-TBD
+
+- Wait for a file to get created. This returns immediately if the file already
+exists.
+
+    GET /file?wait=0 HTTP/1.1
+
+- Wait until the file version is at least 1. This returns immediately if the
+file version is already greater than or equal to 1. This also returns if the
+file doesn't exist, or it gets deleted before reaching version 1.
+
+    GET /file?wait=1 HTTP/1.1
+
+- Wait until the file gets deleted. This returns immediately if the file does
+not exist.
+
+    GET /file?wait=-1 HTTP/1.1
 
 creating a session
 ------------------
@@ -137,6 +210,48 @@ creating a session
     HTTP/1.1 200 OK
     content-length: 0
     location: /pulsed/session/0000000000000000
+    timeout-sec: 10
+
+creating an ephemeral file
+--------------------------
+
+    PUT /newfile?ephemeral HTTP/1.1
+    content-length: 13
+    session: 0000000000000000
+
+    Hello, world!
+
+    HTTP/1.1 200 OK
+    version: 0
+    content-length: 0
+
+You can also create sequential ephemeral files:
+
+    POST /dir?ephemeral HTTP/1.1
+    content-length: 13
+    session: 0000000000000000
+
+    Hello, world!
+
+    HTTP/1.1 200 OK
+    location: /dir/0000000000000000
+    version: 0
+    content-length: 0
+
+sending a pulse (or a heartbeat) to a session
+------------------
+
+Send a pulse to renew a session. Pulsed expires a session if it doesn't receive
+a pulse within a timeout specified in timeout-sec header in the session creation
+response.
+
+    PUT /pulsed/session/0000000000000000 HTTP/1.1
+    content-length: 0
+
+    HTTP/1.1 200 OK
+    content-length: 0
+
+TODO: pulse response could contain some useful info about the session.
 
 deleting a session
 ------------------
@@ -150,9 +265,16 @@ executing multiple operations atomically
 ----------------------------------------
 TBD
 
+asynchronous operations
+-----------------------
+TBD
+
 authentication/authorization
 ----------------------------
 TBD
+
+TODO: include xid (transaction id) in each response, and allow the client to
+send requests with xid to ensure that the client doesn't go back in time.
 
 References
 ----------
