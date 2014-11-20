@@ -15,12 +15,11 @@ import org.slf4j.LoggerFactory;
 /**
  * State machine.
  */
-public final class Pulsed implements StateMachine {
+public final class Pulsed {
   private static final Logger LOG = LoggerFactory.getLogger(Pulsed.class);
-
-  private Zab zab;
-
+  private final Zab zab;
   private String serverId;
+  private final PulsedStateMachine stateMachine = new PulsedStateMachine();
 
   public Pulsed(String serverId, String joinPeer, String logDir) {
     this.serverId = serverId;
@@ -32,56 +31,62 @@ public final class Pulsed implements StateMachine {
       config.setLogDir(this.serverId);
     }
     if (joinPeer != null) {
-      zab = new Zab(this, config, this.serverId, joinPeer);
+      zab = new Zab(stateMachine, config, serverId, joinPeer);
     } else {
       // Recovers from log directory.
-      zab = new Zab(this, config);
+      zab = new Zab(stateMachine, config);
     }
     this.serverId = zab.getServerId();
   }
 
-  @Override
-  public ByteBuffer preprocess(Zxid zxid, ByteBuffer message) {
-    return message;
-  }
+  /**
+   * State machine of Pulsed.
+   */
+  static class PulsedStateMachine implements StateMachine {
+    @Override
+    public ByteBuffer preprocess(Zxid zxid, ByteBuffer message) {
+      return message;
+    }
 
-  @Override
-  public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId,
-                      Object ctx) {
-  }
+    @Override
+    public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId,
+                        Object ctx) {
+    }
 
-  @Override
-  public void removed(String peerId, Object ctx) {
-  }
+    @Override
+    public void removed(String peerId, Object ctx) {
+    }
 
-  @Override
-  public void flushed(ByteBuffer request, Object ctx) {
-  }
+    @Override
+    public void flushed(ByteBuffer request, Object ctx) {
+    }
 
-  @Override
-  public void save(OutputStream os) {
-    throw new UnsupportedOperationException();
-  }
+    @Override
+    public void save(OutputStream os) {
+      throw new UnsupportedOperationException();
+    }
 
-  @Override
-  public void restore(InputStream is) {
-    throw new UnsupportedOperationException();
-  }
+    @Override
+    public void restore(InputStream is) {
+      throw new UnsupportedOperationException();
+    }
 
-  @Override
-  public void snapshotDone(String fileName, Object ctx) {}
+    @Override
+    public void snapshotDone(String fileName, Object ctx) {}
 
-  @Override
-  public void recovering(PendingRequests pendingRequests) {
-  }
+    @Override
+    public void recovering(PendingRequests pendingRequests) {
+    }
 
-  @Override
-  public void leading(Set<String> activeFollowers, Set<String> clusterConfig) {
-    LOG.debug("Leading {}", activeFollowers);
-  }
+    @Override
+    public void leading(Set<String> activeFollowers,
+                        Set<String> clusterConfig) {
+      LOG.debug("Leading {}", activeFollowers);
+    }
 
-  @Override
-  public void following(String leader, Set<String> clusterConfig) {
-    LOG.debug("Following {}", leader);
+    @Override
+    public void following(String leader, Set<String> clusterConfig) {
+      LOG.debug("Following {}", leader);
+    }
   }
 }
