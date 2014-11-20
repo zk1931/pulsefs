@@ -1,13 +1,18 @@
 package com.github.zk1931.pulsed;
 
+import java.io.Serializable;
+
 /**
  * Command interface.
  */
-interface Command {
+public abstract class Command implements Serializable {
+
+  private static final long serialVersionUID = 0L;
+
   /**
    * Executes a command against the database.
    *
-   * @param db database to execute this command against.
+   * @param pd pd to execute this command against.
    */
-  void execute(Database db);
+  abstract void execute(Pulsed pd);
 }

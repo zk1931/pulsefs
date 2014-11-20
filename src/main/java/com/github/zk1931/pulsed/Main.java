@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * zabkv starts here.
+ * pulsed starts here.
  */
 public final class Main {
   private static final Logger LOG = LoggerFactory.getLogger(Main.class);
@@ -79,24 +79,23 @@ public final class Main {
     }
 
     Server server = new Server(Integer.parseInt(cmd.getOptionValue("port")));
-    Database db = new Database(cmd.getOptionValue("addr"),
-                               cmd.getOptionValue("join"),
-                               cmd.getOptionValue("dir"));
 
-    // handles "/members" requests
-    ServletContextHandler membersContext =
-        new ServletContextHandler(ServletContextHandler.SESSIONS);
-    membersContext.setContextPath("/members");
-    membersContext.addServlet(new ServletHolder(new MembersHandler(db)), "/*");
+    Pulsed pd = new Pulsed(cmd.getOptionValue("addr"),
+                           cmd.getOptionValue("join"),
+                           cmd.getOptionValue("dir"));
 
-    // handles "/groups" requests
-    ServletContextHandler groupsContext =
+    ServletContextHandler pulsed =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
-    groupsContext.setContextPath("/groups");
-    groupsContext.addServlet(new ServletHolder(new GroupsHandler(db)), "/*");
+    pulsed.setContextPath("/pulsed");
+    pulsed.addServlet(new ServletHolder(new PulsedHandler(pd)), "/*");
+
+    ServletContextHandler tree =
+        new ServletContextHandler(ServletContextHandler.SESSIONS);
+    tree.setContextPath("/");
+    tree.addServlet(new ServletHolder(new TreeHandler(pd)), "/*");
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
-    contexts.setHandlers(new Handler[] {membersContext, groupsContext});
+    contexts.setHandlers(new Handler[] {pulsed, tree});
     server.setHandler(contexts);
     server.start();
     server.join();
