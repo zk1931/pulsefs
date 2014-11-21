@@ -14,5 +14,5 @@ public abstract class Command implements Serializable {
    *
    * @param pd pd to execute this command against.
    */
-  abstract void execute(Pulsed pd);
+  abstract void execute(Pulsed pd, Object ctx);
 }

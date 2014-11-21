@@ -17,45 +17,58 @@
 
 package com.github.zk1931.pulsed;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.IOException;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
+import java.util.Map;
+import javax.servlet.AsyncContext;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Handler for processing the requests for Pulsed server configuration.
+ * BaseHandler.
  */
-public final class PulsedHandler extends BaseHandler {
+public abstract class BaseHandler extends HttpServlet {
 
   private static final long serialVersionUID = 0L;
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(PulsedHandler.class);
+      LoggerFactory.getLogger(BaseHandler.class);
 
-  private final Pulsed pd;
-
-  PulsedHandler(Pulsed pd) {
-    this.pd = pd;
+  protected String toJson(Map<String, Object> map) {
+    GsonBuilder builder = new GsonBuilder();
+    Gson gson = builder.create();
+    return gson.toJson(map);
   }
 
-  @Override
-  protected void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    LOG.info("Get");
+  protected void badRequest(HttpServletResponse response, AsyncContext ctx) {
     response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_OK);
+    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
     response.setContentLength(0);
+    if (ctx != null) {
+      ctx.complete();
+    }
   }
 
-  @Override
-  protected void doPut(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    LOG.info("Put");
+  protected void badRequest(HttpServletResponse response) {
+    badRequest(response, null);
+  }
+
+
+  protected void serviceUnavailable(HttpServletResponse response,
+                                    AsyncContext ctx) {
     response.setContentType("text/html");
     response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
     response.setContentLength(0);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
+  protected void serviceUnavailable(HttpServletResponse response) {
+    serviceUnavailable(response, null);
   }
 
   /**

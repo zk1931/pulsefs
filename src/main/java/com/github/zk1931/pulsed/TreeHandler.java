@@ -44,6 +44,7 @@ public final class  TreeHandler extends HttpServlet {
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
+    LOG.info("Get");
     response.setContentType("text/html");
     response.setStatus(HttpServletResponse.SC_OK);
     response.setContentLength(0);
@@ -52,6 +53,7 @@ public final class  TreeHandler extends HttpServlet {
   @Override
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
+    LOG.info("Put");
     response.setContentType("text/html");
     response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
     response.setContentLength(0);
