@@ -1,5 +1,12 @@
 package com.github.zk1931.pulsed;
 
+import static com.github.zk1931.pulsed.PathUtils.concat;
+import static com.github.zk1931.pulsed.PathUtils.head;
+import static  com.github.zk1931.pulsed.PathUtils.tail;
+import static com.github.zk1931.pulsed.PathUtils.trimRoot;
+import static com.github.zk1931.pulsed.PathUtils.validatePath;
+import static com.github.zk1931.pulsed.PathUtils.ROOT_PATH;
+import static com.github.zk1931.pulsed.PathUtils.SEP;
 import java.util.TreeMap;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -12,9 +19,6 @@ public class DataTree {
 
   DirNode root = null;
 
-  static final String ROOT_PATH = "/";
-  static final String SEP = "/";
-
   private static final Logger LOG = LoggerFactory.getLogger(DataTree.class);
 
   /**
@@ -25,6 +29,21 @@ public class DataTree {
                             (long)0,
                             (long)-1,
                             new TreeMap<String, Node>());
+  }
+
+  /**
+   * Checks if there a node in given path.
+   *
+   * @param path the path of node.
+   * @return true if the path exists, false otherwise.
+   */
+  boolean exist(String path) {
+    try {
+      getNode(path);
+      return true;
+    } catch (InvalidPath | PathNotExist | NotDirectory ex) {
+      return false;
+    }
   }
 
   /**
@@ -296,7 +315,7 @@ public class DataTree {
     return newNode;
   }
 
-  int size(Node curNode) {
+  public static int size(Node curNode) {
     if (!(curNode instanceof DirNode)) {
       return 1;
     }
@@ -306,42 +325,6 @@ public class DataTree {
       sum += size(node);
     }
     return sum;
-  }
-
-  String head(String path) {
-    int sepIdx = path.indexOf(SEP);
-    if (sepIdx == -1) {
-      return path;
-    }
-    return path.substring(0, sepIdx);
-  }
-
-  String tail(String path) {
-    int sepIdx = path.indexOf(SEP);
-    if (sepIdx == -1) {
-      return "";
-    }
-    return path.substring(sepIdx + 1);
-  }
-
-  String concat(String path1, String path2) {
-    if (path1.equals(ROOT_PATH)) {
-      return path1 + path2;
-    }
-    return path1 + SEP + path2;
-  }
-
-  String trimRoot(String path) {
-    return path.substring(ROOT_PATH.length());
-  }
-
-  void validatePath(String path) throws InvalidPath {
-    if (!path.startsWith(ROOT_PATH)) {
-      throw new InvalidPath("Path must start with " + ROOT_PATH);
-    }
-    if (!path.equals(ROOT_PATH) && path.endsWith("/")) {
-      throw new InvalidPath("Path other than root must not end with /");
-    }
   }
 
   /**

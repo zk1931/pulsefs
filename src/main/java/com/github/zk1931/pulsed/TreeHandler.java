@@ -17,7 +17,12 @@
 
 package com.github.zk1931.pulsed;
 
+import com.github.zk1931.jzab.ZabException;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.Set;
+import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -44,19 +49,98 @@ public final class  TreeHandler extends HttpServlet {
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    LOG.info("Get");
-    response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_OK);
-    response.setContentLength(0);
+    String path = request.getPathInfo();
+    DataTree tree = this.pd.getTree();
+    try {
+      Node node = tree.getNode(path);
+      byte[] data = Utils.toJson(Utils.buildNode(node))
+                         .getBytes(Charset.forName("UTF-8"));
+      response.setStatus(HttpServletResponse.SC_OK);
+      response.getOutputStream().write(data);
+      response.setContentLength(data.length);
+    } catch (DataTree.InvalidPath ex) {
+      Utils.badRequest(response, ex.getMessage());
+    } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
+      Utils.notFound(response, ex.getMessage());
+    }
   }
 
   @Override
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    LOG.info("Put");
-    response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    response.setContentLength(0);
+    String path = request.getPathInfo();
+    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    AsyncContext context = request.startAsync(request, response);
+    boolean recursive = false;
+    if (options.contains("recursive")) {
+      recursive = true;
+    }
+    try {
+      Command cmd;
+      if (options.contains("dir")) {
+        // Means it's a directory.
+        cmd = new CreateDirCommand(path, recursive);
+      } else {
+        int length = request.getContentLength();
+        byte[] value;
+        if (length >= 0) {
+          value = new byte[length];
+          new DataInputStream(request.getInputStream()).readFully(value);
+        } else {
+          value = new byte[0];
+        }
+        cmd = new PutCommand(path, value, recursive);
+      }
+      this.pd.proposeStateChange(cmd, context);
+    } catch (ZabException ex) {
+      Utils.serviceUnavailable(response, context);
+    }
+  }
+
+  @Override
+  protected void doDelete(HttpServletRequest request,
+                          HttpServletResponse response)
+      throws ServletException, IOException {
+    String path = request.getPathInfo();
+    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    AsyncContext context = request.startAsync(request, response);
+    boolean recursive = false;
+    if (options.contains("recursive")) {
+      recursive = true;
+    }
+    try {
+      Command cmd = new DeleteCommand(path, recursive);
+      this.pd.proposeStateChange(cmd, context);
+    } catch (ZabException ex) {
+      Utils.serviceUnavailable(response, context);
+    }
+  }
+
+  @Override
+  protected void doPost(HttpServletRequest request,
+                        HttpServletResponse response)
+      throws ServletException, IOException {
+    String path = request.getPathInfo();
+    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    AsyncContext context = request.startAsync(request, response);
+    boolean recursive = false;
+    if (options.contains("recursive")) {
+      recursive = true;
+    }
+    try {
+      int length = request.getContentLength();
+      byte[] value;
+      if (length >= 0) {
+        value = new byte[length];
+        new DataInputStream(request.getInputStream()).readFully(value);
+      } else {
+        value = new byte[0];
+      }
+      Command cmd = new CreateSeqFileCommand(path, value, recursive);
+      this.pd.proposeStateChange(cmd, context);
+    } catch (ZabException ex) {
+      Utils.serviceUnavailable(response, context);
+    }
   }
 
   /**

@@ -19,6 +19,7 @@ package com.github.zk1931.pulsed;
 
 import java.io.IOException;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -27,7 +28,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Handler for processing the requests for Pulsed server configuration.
  */
-public final class PulsedHandler extends BaseHandler {
+public final class PulsedHandler extends HttpServlet {
 
   private static final long serialVersionUID = 0L;
 

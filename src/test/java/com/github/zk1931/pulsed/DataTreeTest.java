@@ -33,24 +33,24 @@ public class DataTreeTest extends TestBase {
   @Test
   public void testValidatePath1() throws Exception {
     DataTree tree = new DataTree();
-    tree.validatePath("/");
-    tree.validatePath("/foo");
-    tree.validatePath("/foo/bar");
-    tree.validatePath("/foo/bar/123/-sdaf-");
+    PathUtils.validatePath("/");
+    PathUtils.validatePath("/foo");
+    PathUtils.validatePath("/foo/bar");
+    PathUtils.validatePath("/foo/bar/123/-sdaf-");
   }
 
   @Test(expected=DataTree.InvalidPath.class)
   public void testValidatePath2() throws Exception {
     DataTree tree = new DataTree();
     // Must start with '/'
-    tree.validatePath("foo");
+    PathUtils.validatePath("foo");
   }
 
   @Test(expected=DataTree.InvalidPath.class)
   public void testValidatePath3() throws Exception {
     DataTree tree = new DataTree();
     // Can not end with '/'
-    tree.validatePath("/foo/");
+    PathUtils.validatePath("/foo/");
   }
 
   @Test
