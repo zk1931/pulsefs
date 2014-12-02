@@ -17,16 +17,27 @@
 
 package com.github.zk1931.pulsed;
 
-import java.io.Serializable;
-
 /**
- * Command interface.
+ * File Node.
  */
-public abstract class Command implements Serializable {
+public class FileNode extends Node {
 
-  private static final long serialVersionUID = 0L;
+  final byte[] data;
 
-  abstract void execute(DataTree tree) throws DataTree.TreeException;
+  public FileNode(String fullPath,
+                  long version,
+                  long sessionID,
+                  byte[] data) {
+    super(fullPath, version, sessionID);
+    if (data == null) {
+      this.data = new byte[0];
+    } else {
+      this.data = data.clone();
+    }
+  }
 
-  abstract void executeAndReply(DataTree tree, Object ctx);
+  @Override
+  public boolean isDirectory() {
+    return false;
+  }
 }

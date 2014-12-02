@@ -1,6 +1,24 @@
+/**
+ * Licensed to the zk9131 under one or more contributor license agreements.
+ * See the NOTICE file distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.github.zk1931.pulsed;
 
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Set;
@@ -11,6 +29,8 @@ import com.github.zk1931.jzab.StateMachine;
 import com.github.zk1931.jzab.Zab;
 import com.github.zk1931.jzab.ZabConfig;
 import com.github.zk1931.jzab.ZabException;
+import com.github.zk1931.jzab.ZabException.NotBroadcastingPhase;
+import com.github.zk1931.jzab.ZabException.TooManyPendingRequests;
 import com.github.zk1931.jzab.Zxid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,10 +85,23 @@ public final class Pulsed {
     this.zab.remove(peerId, ctx);
   }
 
+  public DataTree getTree() {
+    return this.stateMachine.tree;
+  }
+
+  public void proposeStateChange(Command cmd, AsyncContext ctx)
+      throws NotBroadcastingPhase, IOException, TooManyPendingRequests {
+    ByteBuffer bb = Serializer.serialize(cmd);
+    zab.send(bb, ctx);
+  }
+
   /**
    * State machine of Pulsed.
    */
   class PulsedStateMachine implements StateMachine {
+
+    final DataTree tree = new DataTree();
+
     @Override
     public ByteBuffer preprocess(Zxid zxid, ByteBuffer message) {
       return message;
@@ -77,6 +110,16 @@ public final class Pulsed {
     @Override
     public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId,
                         Object ctx) {
+      Command command = Serializer.deserialize(stateUpdate);
+      if (ctx != null) {
+        command.executeAndReply(this.tree, ctx);
+      } else {
+        try {
+          command.execute(this.tree);
+        } catch (DataTree.TreeException ex) {
+          LOG.trace("exception ", ex);
+        }
+      }
     }
 
     @Override

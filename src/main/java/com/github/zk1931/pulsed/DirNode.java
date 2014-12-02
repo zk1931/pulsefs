@@ -17,16 +17,26 @@
 
 package com.github.zk1931.pulsed;
 
-import java.io.Serializable;
+import java.util.Collections;
+import java.util.Map;
 
 /**
- * Command interface.
+ * Directory Node.
  */
-public abstract class Command implements Serializable {
+public class DirNode extends Node {
 
-  private static final long serialVersionUID = 0L;
+  final Map<String, Node> children;
 
-  abstract void execute(DataTree tree) throws DataTree.TreeException;
+  public DirNode(String fullPath,
+                 long version,
+                 long sessionID,
+                 Map<String, Node> children) {
+    super(fullPath, version, sessionID);
+    this.children = Collections.unmodifiableMap(children);
+  }
 
-  abstract void executeAndReply(DataTree tree, Object ctx);
+  @Override
+  public boolean isDirectory() {
+    return true;
+  }
 }

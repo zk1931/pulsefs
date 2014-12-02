@@ -17,16 +17,49 @@
 
 package com.github.zk1931.pulsed;
 
-import java.io.Serializable;
-
 /**
- * Command interface.
+ * Node of the tree.
  */
-public abstract class Command implements Serializable {
+public abstract class Node {
+  /**
+   * The full path of the node.
+   */
+  final String fullPath;
 
-  private static final long serialVersionUID = 0L;
+  /**
+   * The version of the node.
+   */
+  final long version;
 
-  abstract void execute(DataTree tree) throws DataTree.TreeException;
+  /**
+   * The session ID of the owner of the node.
+   */
+  final long sessionID;
 
-  abstract void executeAndReply(DataTree tree, Object ctx);
+  public Node(String fullPath,
+              long version,
+              long sessionID) {
+    this.fullPath = fullPath;
+    this.version = version;
+    this.sessionID = sessionID;
+  }
+
+  public abstract boolean isDirectory();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    Node node = (Node)obj;
+    return this.fullPath.equals(node.fullPath);
+  }
+
+  @Override
+  public int hashCode() {
+    return this.fullPath.hashCode();
+  }
 }

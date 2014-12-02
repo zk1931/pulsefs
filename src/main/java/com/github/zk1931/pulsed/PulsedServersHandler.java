@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Handler for processing the requests for Pulsed server configuration.
  */
-public final class PulsedServersHandler extends BaseHandler {
+public final class PulsedServersHandler extends HttpServlet {
 
   private static final long serialVersionUID = 0L;
 
@@ -56,7 +57,7 @@ public final class PulsedServersHandler extends BaseHandler {
     } else {
       resp.put("cluster_members", this.pd.getClusterMembers());
     }
-    String content = toJson(resp);
+    String content = Utils.toJson(resp);
     response.setContentType("text/html");
     response.setStatus(HttpServletResponse.SC_OK);
     response.setContentLength(content.length());
@@ -70,13 +71,13 @@ public final class PulsedServersHandler extends BaseHandler {
       throws ServletException, IOException {
     String peerId = request.getPathInfo().substring(1);
     if (!this.pd.getClusterMembers().contains(peerId)) {
-      badRequest(response);
+      Utils.badRequest(response, peerId + " is not in cluster.");
     } else {
       AsyncContext context = request.startAsync(request, response);
       try {
         this.pd.removePeer(peerId, context);
       } catch (ZabException ex) {
-        serviceUnavailable(response, context);
+        Utils.serviceUnavailable(response, context);
       }
     }
   }
