@@ -19,13 +19,11 @@ package com.github.zk1931.pulsed;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
+import java.io.OutputStreamWriter;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletResponse;
@@ -59,26 +57,26 @@ public final class Utils {
     }
     response.addHeader("version", Long.toString(node.version));
     response.addHeader("type", type);
+    response.addHeader("path", node.fullPath);
     response.setStatus(HttpServletResponse.SC_OK);
     if (context != null) {
       context.complete();
     }
   }
 
-  public static void writeData(Node node, HttpServletResponse response)
+  public static void writeData(Node node,
+                               HttpServletResponse response)
       throws IOException {
     writeData(node, response, null);
   }
 
-  public static void writeData(Node node, HttpServletResponse response,
+  public static void writeData(Node node,
+                               HttpServletResponse response,
                                AsyncContext context) throws IOException {
-    byte[] data;
-    if (node instanceof FileNode) {
-      data = ((FileNode)node).data;
-    } else {
-      data = Utils.toJson(Utils.buildDirNode(node))
-                  .getBytes(Charset.forName("UTF-8"));
+    if (!(node instanceof FileNode)) {
+      throw new RuntimeException("Node must be a file");
     }
+    byte[] data = ((FileNode)node).data;
     response.getOutputStream().write(data);
     response.setContentLength(data.length);
     if (context != null) {
@@ -86,47 +84,70 @@ public final class Utils {
     }
   }
 
-  public static void writeNode(Node node, HttpServletResponse response)
-      throws IOException {
-    writeNode(node, response, null);
+  public static void writeChildren(Node node,
+                                   HttpServletResponse response,
+                                   boolean recursive) throws IOException {
+    writeChildren(node, response, recursive, null);
   }
 
-  public static void writeNode(Node node, HttpServletResponse response,
-                               AsyncContext context) throws IOException {
-    writeHeader(node, response, null);
-    writeData(node, response, null);
+  public static void writeChildren(Node node,
+                                   HttpServletResponse response,
+                                   boolean recursive,
+                                   AsyncContext context) throws IOException {
+    if (!(node instanceof DirNode)) {
+      throw new RuntimeException("Node must be a directory");
+    }
+    JsonWriter writer =
+      new JsonWriter(new OutputStreamWriter(response.getOutputStream(),
+                                            "UTF-8"));
+    // 2-space indentation.
+    writer.setIndent("  ");
+    try {
+      writeDir(node, writer, recursive);
+    } finally {
+      writer.close();
+    }
     if (context != null) {
       context.complete();
     }
   }
 
-  public static Map<String, Object> buildMetadata(Node node) {
-    Map<String, Object> nodeInfo = new HashMap<String, Object>();
-    nodeInfo.put("version", Long.toString(node.version));
-    String type;
-    if (node.isDirectory()) {
+  static void writeMetadata(Node node, JsonWriter writer) throws IOException {
+    String type = "file";
+    if (node instanceof DirNode) {
       type = "directory";
-    } else {
-      type = "file";
     }
-    nodeInfo.put("type", type);
-    nodeInfo.put("session", node.sessionID);
-    nodeInfo.put("path", node.fullPath);
-    return nodeInfo;
+    writer.beginObject();
+    writer.name("version").value(node.version);
+    writer.name("path").value(node.fullPath);
+    writer.name("sessionID").value(node.sessionID);
+    writer.name("type").value(type);
+    writer.endObject();
   }
 
-  public static Map<String, Object> buildDirNode(Node node) {
-    Map<String, Object> nodeInfo = new HashMap<String, Object>();
-    ArrayList<Map<String, Object>> children = new ArrayList<>();
-    if (node instanceof DirNode) {
-      for (Node child : ((DirNode)node).children.values()) {
-        children.add(buildMetadata(child));
+  static void writeDir(Node node, JsonWriter writer, boolean recursive)
+      throws IOException {
+    writer.beginObject();
+    writer.name("version").value(node.version);
+    writer.name("path").value(node.fullPath);
+    writer.name("sessionID").value(node.sessionID);
+    writer.name("type").value("dir");
+    writer.name("children");
+    writeChildren(node, writer, recursive);
+    writer.endObject();
+  }
+
+  static void writeChildren(Node node, JsonWriter writer, boolean recursive)
+      throws IOException {
+    writer.beginArray();
+    for (Node child : ((DirNode)node).children.values()) {
+      if (recursive && child instanceof DirNode) {
+        writeDir(child, writer, recursive);
+      } else {
+        writeMetadata(child, writer);
       }
-      nodeInfo.put("children", children);
-    } else {
-      throw new RuntimeException("Not a directory.");
     }
-    return nodeInfo;
+    writer.endArray();
   }
 
   public static void badRequest(HttpServletResponse response, String desc,
