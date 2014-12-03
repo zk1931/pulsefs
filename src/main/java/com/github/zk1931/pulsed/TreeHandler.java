@@ -20,7 +20,6 @@ package com.github.zk1931.pulsed;
 import com.github.zk1931.jzab.ZabException;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.Set;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
@@ -53,11 +52,7 @@ public final class  TreeHandler extends HttpServlet {
     DataTree tree = this.pd.getTree();
     try {
       Node node = tree.getNode(path);
-      byte[] data = Utils.toJson(Utils.buildNode(node))
-                         .getBytes(Charset.forName("UTF-8"));
-      response.setStatus(HttpServletResponse.SC_OK);
-      response.getOutputStream().write(data);
-      response.setContentLength(data.length);
+      Utils.writeNode(node, response);
     } catch (DataTree.InvalidPath ex) {
       Utils.badRequest(response, ex.getMessage());
     } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
