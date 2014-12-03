@@ -17,12 +17,19 @@
 
 package com.github.zk1931.pulsed;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.zip.Adler32;
+
 /**
  * File Node.
  */
 public class FileNode extends Node {
 
   final byte[] data;
+
+  final long checksum;
 
   public FileNode(String fullPath,
                   long version,
@@ -34,10 +41,31 @@ public class FileNode extends Node {
     } else {
       this.data = data.clone();
     }
+    this.checksum = calcChecksum();
   }
 
   @Override
   public boolean isDirectory() {
     return false;
+  }
+
+  @Override
+  public long getChecksum() {
+    return this.checksum;
+  }
+
+  private long calcChecksum() {
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    try (DataOutputStream dout = new DataOutputStream(bout)) {
+      dout.write(data);
+      dout.writeLong(version);
+      dout.writeLong(sessionID);
+      dout.writeBytes(fullPath);
+      Adler32 adler = new Adler32();
+      adler.update(bout.toByteArray());
+      return adler.getValue();
+    } catch (IOException ex) {
+      throw new RuntimeException(ex.getMessage());
+    }
   }
 }

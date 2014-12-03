@@ -46,6 +46,8 @@ public abstract class Node {
 
   public abstract boolean isDirectory();
 
+  public abstract long getChecksum();
+
   @Override
   public boolean equals(Object obj) {
     if (obj == null) {

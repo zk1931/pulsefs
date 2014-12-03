@@ -17,8 +17,12 @@
 
 package com.github.zk1931.pulsed;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.zip.Adler32;
 
 /**
  * Directory Node.
@@ -27,16 +31,40 @@ public class DirNode extends Node {
 
   final Map<String, Node> children;
 
+  final long checksum;
+
   public DirNode(String fullPath,
                  long version,
                  long sessionID,
                  Map<String, Node> children) {
     super(fullPath, version, sessionID);
     this.children = Collections.unmodifiableMap(children);
+    this.checksum = calcChecksum();
   }
 
   @Override
   public boolean isDirectory() {
     return true;
+  }
+
+  @Override
+  public long getChecksum() {
+    return this.checksum;
+  }
+
+  private long calcChecksum() {
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    try (DataOutputStream dout = new DataOutputStream(bout)) {
+      dout.writeLong(version);
+      dout.writeBytes(fullPath);
+      for (Node child : children.values()) {
+        dout.writeLong(child.getChecksum());
+      }
+      Adler32 adler = new Adler32();
+      adler.update(bout.toByteArray());
+      return adler.getValue();
+    } catch (IOException ex) {
+      throw new RuntimeException(ex.getMessage());
+    }
   }
 }
