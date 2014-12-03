@@ -20,6 +20,7 @@ package com.github.zk1931.pulsed;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -46,6 +47,59 @@ public final class Utils {
     return gson.toJson(obj);
   }
 
+  public static void writeHeader(Node node, HttpServletResponse response) {
+    writeHeader(node, response, null);
+  }
+
+  public static void writeHeader(Node node, HttpServletResponse response,
+                                 AsyncContext context) {
+    String type = "file";
+    if (node instanceof DirNode) {
+      type = "directory";
+    }
+    response.addHeader("version", Long.toString(node.version));
+    response.addHeader("type", type);
+    response.setStatus(HttpServletResponse.SC_OK);
+    if (context != null) {
+      context.complete();
+    }
+  }
+
+  public static void writeData(Node node, HttpServletResponse response)
+      throws IOException {
+    writeData(node, response, null);
+  }
+
+  public static void writeData(Node node, HttpServletResponse response,
+                               AsyncContext context) throws IOException {
+    byte[] data;
+    if (node instanceof FileNode) {
+      data = ((FileNode)node).data;
+    } else {
+      data = Utils.toJson(Utils.buildDirNode(node))
+                  .getBytes(Charset.forName("UTF-8"));
+    }
+    response.getOutputStream().write(data);
+    response.setContentLength(data.length);
+    if (context != null) {
+      context.complete();
+    }
+  }
+
+  public static void writeNode(Node node, HttpServletResponse response)
+      throws IOException {
+    writeNode(node, response, null);
+  }
+
+  public static void writeNode(Node node, HttpServletResponse response,
+                               AsyncContext context) throws IOException {
+    writeHeader(node, response, null);
+    writeData(node, response, null);
+    if (context != null) {
+      context.complete();
+    }
+  }
+
   public static Map<String, Object> buildMetadata(Node node) {
     Map<String, Object> nodeInfo = new HashMap<String, Object>();
     nodeInfo.put("version", Long.toString(node.version));
@@ -61,8 +115,8 @@ public final class Utils {
     return nodeInfo;
   }
 
-  public static Map<String, Object> buildNode(Node node) {
-    Map<String, Object> nodeInfo = buildMetadata(node);
+  public static Map<String, Object> buildDirNode(Node node) {
+    Map<String, Object> nodeInfo = new HashMap<String, Object>();
     ArrayList<Map<String, Object>> children = new ArrayList<>();
     if (node instanceof DirNode) {
       for (Node child : ((DirNode)node).children.values()) {
@@ -70,10 +124,7 @@ public final class Utils {
       }
       nodeInfo.put("children", children);
     } else {
-      if (!(node instanceof FileNode)) {
-        throw new RuntimeException("node must be FileNode here.");
-      }
-      nodeInfo.put("data", ((FileNode)node).data);
+      throw new RuntimeException("Not a directory.");
     }
     return nodeInfo;
   }
