@@ -21,7 +21,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -58,6 +57,7 @@ public final class Utils {
     response.addHeader("version", Long.toString(node.version));
     response.addHeader("type", type);
     response.addHeader("path", node.fullPath);
+    response.addHeader("checksum", Long.toHexString(node.getChecksum()));
     response.setStatus(HttpServletResponse.SC_OK);
     if (context != null) {
       context.complete();
@@ -78,7 +78,6 @@ public final class Utils {
     }
     byte[] data = ((FileNode)node).data;
     response.getOutputStream().write(data);
-    response.setContentLength(data.length);
     if (context != null) {
       context.complete();
     }
@@ -97,9 +96,7 @@ public final class Utils {
     if (!(node instanceof DirNode)) {
       throw new RuntimeException("Node must be a directory");
     }
-    JsonWriter writer =
-      new JsonWriter(new OutputStreamWriter(response.getOutputStream(),
-                                            "UTF-8"));
+    JsonWriter writer = new JsonWriter(response.getWriter());
     // 2-space indentation.
     writer.setIndent("  ");
     try {
@@ -122,6 +119,7 @@ public final class Utils {
     writer.name("path").value(node.fullPath);
     writer.name("sessionID").value(node.sessionID);
     writer.name("type").value(type);
+    writer.name("checksum").value(Long.toHexString(node.getChecksum()));
     writer.endObject();
   }
 
@@ -132,6 +130,7 @@ public final class Utils {
     writer.name("path").value(node.fullPath);
     writer.name("sessionID").value(node.sessionID);
     writer.name("type").value("dir");
+    writer.name("checksum").value(Long.toHexString(node.getChecksum()));
     writer.name("children");
     writeChildren(node, writer, recursive);
     writer.endObject();
