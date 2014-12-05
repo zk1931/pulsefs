@@ -22,8 +22,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -221,10 +222,39 @@ public final class Utils {
     }
   }
 
-  public static Set<String> getQueryStrings(String query) {
-    if (query == null) {
-      return new HashSet<String>();
+  // Parse the query string and convert to key-value pairs.
+  //
+  // For example:
+  //
+  // if the query string is "wait=2&recursive" then it returns:
+  //    KEY         VALUE
+  //    -----------------
+  //    wait         2
+  //    recursive    null
+  //    -----------------
+  public static Map<String, String> getQueries(String queryString) {
+    if (queryString == null) {
+      return new HashMap<String, String>();
     }
-    return new HashSet<String>(Arrays.asList(query.split("&")));
+    Map<String, String> queryMap = new HashMap<String, String>();
+    List<String> queries = Arrays.asList(queryString.split("&"));
+    for (String query : queries) {
+      String key;
+      String value;
+      int idx = query.indexOf("=");
+      if (idx == -1) {
+        key = query;
+        value = null;
+      } else {
+        key = query.substring(0, idx);
+        if (query.length() > idx + 1) {
+          value = query.substring(idx + 1, query.length());
+        } else {
+          value = null;
+        }
+      }
+      queryMap.put(key, value);
+    }
+    return queryMap;
   }
 }

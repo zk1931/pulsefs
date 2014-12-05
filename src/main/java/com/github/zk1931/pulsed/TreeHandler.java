@@ -20,7 +20,7 @@ package com.github.zk1931.pulsed;
 import com.github.zk1931.jzab.ZabException;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.Set;
+import java.util.Map;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -50,20 +50,36 @@ public final class  TreeHandler extends HttpServlet {
       throws ServletException, IOException {
     String path = request.getPathInfo();
     DataTree tree = this.pd.getTree();
-    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    Map<String, String> options = Utils.getQueries(request.getQueryString());
     boolean recursive = false;
+    if (options.containsKey("recursive")) {
+      recursive = true;
+    }
     try {
-      Node node = tree.getNode(path);
-      Utils.writeHeader(node, response);
-      if (node instanceof DirNode) {
-        if (options.contains("recursive")) {
-          recursive = true;
+      PathUtils.validatePath(path);
+      if (options.containsKey("wait")) {
+        // If the parameters contain "wait" then it's a watch request, instead
+        // of serving it directly we need to flush it through Zab so all the
+        // watch/Put requests will be processed within single thread.
+        long version = Long.parseLong(options.get("wait"));
+        Command watch = new WatchCommand(path, version, recursive);
+        AsyncContext context = request.startAsync(request, response);
+        try {
+          this.pd.proposeFlushRequest(watch, context);
+        } catch (ZabException ex) {
+          Utils.serviceUnavailable(response, context);
         }
-        Utils.writeChildren(node, response, recursive);
       } else {
-        Utils.writeData(node, response);
+        // If it's not watch request, serves it directly.
+        Node node = tree.getNode(path);
+        Utils.writeHeader(node, response);
+        if (node instanceof DirNode) {
+          Utils.writeChildren(node, response, recursive);
+        } else {
+          Utils.writeData(node, response);
+        }
       }
-    } catch (DataTree.InvalidPath ex) {
+    } catch (DataTree.InvalidPath | NumberFormatException ex) {
       Utils.badRequest(response, ex.getMessage());
     } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
       Utils.notFound(response, ex.getMessage());
@@ -74,15 +90,15 @@ public final class  TreeHandler extends HttpServlet {
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getPathInfo();
-    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = request.startAsync(request, response);
     boolean recursive = false;
-    if (options.contains("recursive")) {
+    if (options.containsKey("recursive")) {
       recursive = true;
     }
     try {
       Command cmd;
-      if (options.contains("dir")) {
+      if (options.containsKey("dir")) {
         // Means it's a directory.
         cmd = new CreateDirCommand(path, recursive);
       } else {
@@ -107,10 +123,10 @@ public final class  TreeHandler extends HttpServlet {
                           HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getPathInfo();
-    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = request.startAsync(request, response);
     boolean recursive = false;
-    if (options.contains("recursive")) {
+    if (options.containsKey("recursive")) {
       recursive = true;
     }
     try {
@@ -126,10 +142,10 @@ public final class  TreeHandler extends HttpServlet {
                         HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getPathInfo();
-    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = request.startAsync(request, response);
     boolean recursive = false;
-    if (options.contains("recursive")) {
+    if (options.containsKey("recursive")) {
       recursive = true;
     }
     try {
