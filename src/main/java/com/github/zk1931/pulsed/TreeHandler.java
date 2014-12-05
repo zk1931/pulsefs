@@ -50,9 +50,19 @@ public final class  TreeHandler extends HttpServlet {
       throws ServletException, IOException {
     String path = request.getPathInfo();
     DataTree tree = this.pd.getTree();
+    Set<String> options = Utils.getQueryStrings(request.getQueryString());
+    boolean recursive = false;
     try {
       Node node = tree.getNode(path);
-      Utils.writeNode(node, response);
+      Utils.writeHeader(node, response);
+      if (node instanceof DirNode) {
+        if (options.contains("recursive")) {
+          recursive = true;
+        }
+        Utils.writeChildren(node, response, recursive);
+      } else {
+        Utils.writeData(node, response);
+      }
     } catch (DataTree.InvalidPath ex) {
       Utils.badRequest(response, ex.getMessage());
     } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
