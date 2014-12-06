@@ -48,6 +48,8 @@ public class PutCommand extends Command {
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
       execute(tree);
+      Node node = tree.getNode(this.path);
+      Utils.writeHeader(node, response);
       Utils.replyOK(response, null, context);
     } catch (PathNotExist ex) {
       Utils.notFound(response, ex.getMessage(), context);

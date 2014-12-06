@@ -19,6 +19,8 @@
 package com.github.zk1931.pulsed;
 
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -238,5 +240,29 @@ public class DataTreeTest extends TestBase {
                                      .children.containsKey("bar1"));
     Assert.assertTrue(((DirNode)tree.getNode("/foo"))
                                     .children.containsKey("bar2"));
+  }
+
+  @Test
+  public void testReturnChanges() throws Exception {
+    DataTree tree = new DataTree();
+    List<Node> changes = new LinkedList<Node>();
+    tree.root =
+      tree.createNode(tree.root, "foo/bar", null, 0, true, false, changes);
+    Assert.assertEquals(3, changes.size());
+    // version of newly created node bar should be 1.
+    Assert.assertEquals(0, changes.get(0).version);
+    // version of newly created node foo should be 1.
+    Assert.assertEquals(1, changes.get(1).version);
+    // version of root node should be 1.
+    Assert.assertEquals(1, changes.get(2).version);
+
+    changes = new LinkedList<Node>();
+    tree.root =
+      (DirNode)tree.deleteNode(tree.root, "foo", true, changes);
+    // Two deleted nodes + one changed node(root node)
+    Assert.assertEquals(3, changes.size());
+    Assert.assertEquals(-1, changes.get(0).version);
+    Assert.assertEquals(-1, changes.get(1).version);
+    Assert.assertEquals(2, changes.get(2).version);
   }
 }

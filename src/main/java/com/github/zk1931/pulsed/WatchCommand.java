@@ -17,48 +17,58 @@
 
 package com.github.zk1931.pulsed;
 
-import com.github.zk1931.pulsed.DataTree.InvalidPath;
-import com.github.zk1931.pulsed.DataTree.NodeAlreadyExist;
-import com.github.zk1931.pulsed.DataTree.NotDirectory;
 import com.github.zk1931.pulsed.DataTree.PathNotExist;
 import com.github.zk1931.pulsed.DataTree.TreeException;
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.AsyncContext;
+import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Command for creating directory.
+ * Command for watching specific node.
  */
-public class CreateDirCommand extends Command {
+public class WatchCommand extends Command {
 
   private static final long serialVersionUID = 0L;
-  private static final Logger LOG = LoggerFactory.getLogger(PutCommand.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WatchCommand.class);
 
   final String path;
+  final long version;
   final boolean recursive;
 
-  public CreateDirCommand(String path, boolean recursive) {
+  public WatchCommand(String path, long version, boolean recursive) {
     this.path = path;
+    this.version = version;
     this.recursive = recursive;
   }
 
-  void execute(DataTree tree)
-      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
-    tree.createDir(this.path, -1, this.recursive);
+  void execute(DataTree tree) {
   }
 
   void executeAndReply(DataTree tree, Object ctx) {
     AsyncContext context = (AsyncContext)ctx;
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
+    HttpWatch watch = new HttpWatch(this, context);
+    Node node;
     try {
-      execute(tree);
-      Node node = tree.getNode(this.path);
-      Utils.writeHeader(node, response);
-      Utils.replyOK(response, null, context);
-    } catch (PathNotExist ex) {
-      Utils.notFound(response, ex.getMessage(), context);
-    }catch (TreeException ex) {
+      try {
+        node = tree.getNode(this.path);
+      } catch (PathNotExist ex) {
+        node = null;
+      }
+      if (node == null && version == -1) {
+        // The node doesn't exist and the watch is for the deletion of the
+        // node, replies it directly.
+        Utils.replyOK(response, null, context);
+      } else if (node != null && watch.isTriggerable(node)) {
+        // The watch is for the version and it's triggerable now, triggers  it
+        // directly.
+        watch.trigger(node);
+      } else {
+        // Otherwise add the watch to DataTree.
+        tree.addWatch(watch);
+      }
+    } catch (TreeException ex) {
       Utils.badRequest(response, ex.getMessage(), context);
     }
   }

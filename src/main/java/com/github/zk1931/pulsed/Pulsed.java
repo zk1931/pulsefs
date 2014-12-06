@@ -95,6 +95,12 @@ public final class Pulsed {
     zab.send(bb, ctx);
   }
 
+  public void proposeFlushRequest(Command cmd, AsyncContext ctx)
+      throws NotBroadcastingPhase, IOException, TooManyPendingRequests {
+    ByteBuffer bb = Serializer.serialize(cmd);
+    zab.flush(bb, ctx);
+  }
+
   /**
    * State machine of Pulsed.
    */
@@ -134,6 +140,8 @@ public final class Pulsed {
 
     @Override
     public void flushed(ByteBuffer request, Object ctx) {
+      Command command = Serializer.deserialize(request);
+      command.executeAndReply(this.tree, ctx);
     }
 
     @Override

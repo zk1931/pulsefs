@@ -24,8 +24,10 @@ import static com.github.zk1931.pulsed.PathUtils.trimRoot;
 import static com.github.zk1931.pulsed.PathUtils.ROOT_PATH;
 import static com.github.zk1931.pulsed.PathUtils.SEP;
 import static com.github.zk1931.pulsed.PathUtils.validatePath;
-import java.util.TreeMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +37,8 @@ import org.slf4j.LoggerFactory;
 public class DataTree {
 
   DirNode root = null;
+
+  WatchManager watchManager = new WatchManager();
 
   private static final Logger LOG = LoggerFactory.getLogger(DataTree.class);
 
@@ -70,74 +74,6 @@ public class DataTree {
    */
   public int size() {
     return size(this.root);
-  }
-
-  /**
-   * Creates a node of file type in tree.
-   *
-   * @param path the path of node.
-   * @param data the initial data of the node.
-   * @param sessionID the ID of the session of node, -1 if it doesn't belong to
-   * any sessions.
-   * @throws NotAlreadyExist if this path has arealdy existed in tree.
-   * @throws PathNotExist if the path of its parent doesn't exist in tree.
-   * @throws InvalidPath if the path is invalid.
-   * @throws NotDirectory if the path goes through a non-directory node.
-   */
-  public void createFile(String path,
-                         byte[] data,
-                         long sessionID,
-                         boolean recursive)
-      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
-    validatePath(path);
-    path = trimRoot(path);
-    this.root =
-      createNode(this.root, path, data, sessionID, recursive, false);
-  }
-
-  /**
-   * Creates a node of directory type in tree.
-   *
-   * @param path the path of node.
-   * @param sessionID the ID of the session of node, -1 if it doesn't belong to
-   * any sessions.
-   * @throws NotAlreadyExist if this path has arealdy existed in tree.
-   * @throws PathNotExist if the path of its parent doesn't exist in tree.
-   * @throws InvalidPath if the path is invalid.
-   * @throws NotDirectory if the path goes through a non-directory node.
-   */
-  public void createDir(String path,
-                        long sessionID,
-                        boolean recursive)
-      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
-    validatePath(path);
-    path = trimRoot(path);
-    this.root =
-      createNode(this.root, path, null, sessionID, recursive, true);
-  }
-
-  /**
-   * Deletes a node in tree.
-   *
-   * @param path the path of node.
-   * @param recursive deletes all nodes under this directory as needed.
-   * @throws PathNotExist if the path doesn't exist in tree.
-   * @throws DirectoryNotEmpty delete a non-empty directory while recursive
-   * parameter is false.
-   * @throws InvalidPath if the path is invalid.
-   * @throws DeleteRootDir trying to delete root directory.
-   * @throws NotDirectory if the path goes through a non-directory node.
-   */
-  public void deleteNode(String path,
-                         boolean recursive)
-      throws PathNotExist, DirectoryNotEmpty, InvalidPath, DeleteRootDir,
-             NotDirectory {
-    validatePath(path);
-    path = trimRoot(path);
-    if (path.equals("")) {
-      throw new DeleteRootDir();
-    }
-    this.root = (DirNode)deleteNode(this.root, path, recursive);
   }
 
   /**
@@ -177,6 +113,86 @@ public class DataTree {
   }
 
   /**
+   * Creates a node of file type in tree.
+   *
+   * @param path the path of node.
+   * @param data the initial data of the node.
+   * @param sessionID the ID of the session of node, -1 if it doesn't belong to
+   * any sessions.
+   * @throws NotAlreadyExist if this path has arealdy existed in tree.
+   * @throws PathNotExist if the path of its parent doesn't exist in tree.
+   * @throws InvalidPath if the path is invalid.
+   * @throws NotDirectory if the path goes through a non-directory node.
+   */
+  public void createFile(String path,
+                         byte[] data,
+                         long sessionID,
+                         boolean recursive)
+      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+    validatePath(path);
+    path = trimRoot(path);
+    // Records the nodes that have been changed(version change/newly created)
+    // by this request.
+    List<Node> changes = new LinkedList<Node>();
+    this.root =
+      createNode(this.root, path, data, sessionID, recursive, false, changes);
+    triggerWatches(changes);
+  }
+
+  /**
+   * Creates a node of directory type in tree.
+   *
+   * @param path the path of node.
+   * @param sessionID the ID of the session of node, -1 if it doesn't belong to
+   * any sessions.
+   * @throws NotAlreadyExist if this path has arealdy existed in tree.
+   * @throws PathNotExist if the path of its parent doesn't exist in tree.
+   * @throws InvalidPath if the path is invalid.
+   * @throws NotDirectory if the path goes through a non-directory node.
+   */
+  public void createDir(String path,
+                        long sessionID,
+                        boolean recursive)
+      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+    validatePath(path);
+    path = trimRoot(path);
+    // Records the nodes that have been changed(version change/newly created)
+    // by this request.
+    List<Node> changes = new LinkedList<Node>();
+    this.root =
+      createNode(this.root, path, null, sessionID, recursive, true, changes);
+    triggerWatches(changes);
+  }
+
+  /**
+   * Deletes a node in tree.
+   *
+   * @param path the path of node.
+   * @param recursive deletes all nodes under this directory as needed.
+   * @throws PathNotExist if the path doesn't exist in tree.
+   * @throws DirectoryNotEmpty delete a non-empty directory while recursive
+   * parameter is false.
+   * @throws InvalidPath if the path is invalid.
+   * @throws DeleteRootDir trying to delete root directory.
+   * @throws NotDirectory if the path goes through a non-directory node.
+   */
+  public void deleteNode(String path,
+                         boolean recursive)
+      throws PathNotExist, DirectoryNotEmpty, InvalidPath, DeleteRootDir,
+             NotDirectory {
+    validatePath(path);
+    path = trimRoot(path);
+    if (path.equals("")) {
+      throw new DeleteRootDir();
+    }
+    // Records the nodes that have been changed(version change/deleted)
+    // by this request.
+    List<Node> changes = new LinkedList<Node>();
+    this.root = (DirNode)deleteNode(this.root, path, recursive, changes);
+    triggerWatches(changes);
+  }
+
+  /**
    * Updates the data of the node.
    *
    * @param path the path of node.
@@ -195,8 +211,16 @@ public class DataTree {
              NotDirectory {
     validatePath(path);
     path = trimRoot(path);
-    this.root = (DirNode)setData(this.root, path, data, version);
+    // Records the nodes that have been changed(version change/data change)
+    // by this request.
+    List<Node> changes = new LinkedList<Node>();
+    this.root = (DirNode)setData(this.root, path, data, version, changes);
+    triggerWatches(changes);
     return this.root.version;
+  }
+
+  public void addWatch(Watch watch) {
+    this.watchManager.addWatch(watch);
   }
 
   DirNode createNode(DirNode curNode,
@@ -204,7 +228,8 @@ public class DataTree {
                      byte[] data,
                      long sessionID,
                      boolean recursive,
-                     boolean dir)
+                     boolean dir,
+                     List<Node> changes)
       throws NotDirectory, NodeAlreadyExist, PathNotExist {
     Node newChild;
     DirNode newNode;
@@ -223,6 +248,7 @@ public class DataTree {
       } else {
         newChild = new FileNode(fullPath, 0, sessionID, data);
       }
+      changes.add(newChild);
     } else {
       // There's still '/' in path, we'll continue recursion.
       childName = head(path);
@@ -242,29 +268,58 @@ public class DataTree {
       if (!(child instanceof DirNode)) {
         throw new NotDirectory(child.fullPath + " is not directory.");
       }
-      newChild =
-        createNode((DirNode)child, nextPath, data, sessionID, recursive, dir);
+      newChild = createNode((DirNode)child,
+                            nextPath,
+                            data,
+                            sessionID,
+                            recursive,
+                            dir,
+                            changes);
     }
     Map<String, Node> newChildren = new TreeMap<>(curNode.children);
     newChildren.put(childName, newChild);
+    long newVersion = curNode.version + 1;
     newNode = new DirNode(curNode.fullPath,
-                          curNode.version + 1,
+                          newVersion,
                           curNode.sessionID,
                           newChildren);
+    changes.add(newNode);
     return newNode;
   }
 
   Node deleteNode(Node curNode,
                   String path,
-                  boolean recursive)
+                  boolean recursive,
+                  List<Node> changes)
       throws PathNotExist, DirectoryNotEmpty, NotDirectory {
     if (path.equals("")) {
-      if (curNode.isDirectory() &&
+      if (curNode instanceof DirNode &&
           !((DirNode)curNode).children.isEmpty() &&
           !recursive) {
         throw new DirectoryNotEmpty(curNode.fullPath + " is not empty.");
       }
-      return null;
+      if (curNode instanceof DirNode) {
+        // If it's directory node, deletes its children recursivly.
+        for (Node child : ((DirNode)curNode).children.values()) {
+          deleteNode(child, path, recursive, changes);
+        }
+      }
+      Node ret;
+      // version of -1 means deleted node.
+      long version = -1;
+      if (curNode instanceof DirNode) {
+        ret = new DirNode(curNode.fullPath,
+                          version,
+                          curNode.sessionID,
+                          ((DirNode)curNode).children);
+      } else {
+        ret = new FileNode(curNode.fullPath,
+                           version,
+                           curNode.sessionID,
+                           ((FileNode)curNode).data);
+      }
+      changes.add(ret);
+      return ret;
     }
     if (!(curNode instanceof DirNode)) {
       throw new NotDirectory(curNode.fullPath + " is not directory.");
@@ -278,24 +333,27 @@ public class DataTree {
       throw new PathNotExist(concat(curNode.fullPath, path) +
           " doesn't exist");
     }
-    newChild = deleteNode(child, nextPath, recursive);
+    newChild = deleteNode(child, nextPath, recursive, changes);
     Map<String, Node> newChildren = new TreeMap<>(((DirNode)curNode).children);
-    if (newChild != null) {
+    if (newChild.version != -1) {
       newChildren.put(childName, newChild);
     } else {
       newChildren.remove(childName);
     }
+    long newVersion = curNode.version + 1;
     newNode = new DirNode(curNode.fullPath,
-                          curNode.version + 1,
+                          newVersion,
                           curNode.sessionID,
                           newChildren);
+    changes.add(newNode);
     return newNode;
   }
 
   Node setData(Node curNode,
                String path,
                byte[] data,
-               long version)
+               long version,
+               List<Node> changes)
       throws PathNotExist, VersionNotMatch, DirectoryNode, NotDirectory {
     if (path.equals("")) {
       if (version != -1 && curNode.version != version) {
@@ -305,10 +363,13 @@ public class DataTree {
       if (curNode.isDirectory()) {
         throw new DirectoryNode(curNode.fullPath + " is directory.");
       }
-      return new FileNode(curNode.fullPath,
-                          curNode.version + 1,
-                          curNode.sessionID,
-                          data);
+      long newVersion = curNode.version + 1;
+      Node ret = new FileNode(curNode.fullPath,
+                              newVersion,
+                              curNode.sessionID,
+                              data);
+      changes.add(ret);
+      return ret;
     }
     if (!(curNode instanceof DirNode)) {
       throw new NotDirectory(curNode.fullPath + " is not directory.");
@@ -322,13 +383,15 @@ public class DataTree {
       throw new PathNotExist(concat(curNode.fullPath, childName) +
           " doesn't exist");
     }
-    newChild = setData(child, nextPath, data, version);
+    newChild = setData(child, nextPath, data, version, changes);
     Map<String, Node> newChildren = new TreeMap<>(((DirNode)curNode).children);
     newChildren.put(childName, newChild);
+    long newVersion = curNode.version + 1;
     newNode = new DirNode(curNode.fullPath,
-                          curNode.version + 1,
+                          newVersion,
                           curNode.sessionID,
                           newChildren);
+    changes.add(newNode);
     return newNode;
   }
 
@@ -342,6 +405,12 @@ public class DataTree {
       sum += size(node);
     }
     return sum;
+  }
+
+  private void triggerWatches(List<Node> changes) {
+    for (Node node: changes) {
+      this.watchManager.triggerAndRemoveWatches(node);
+    }
   }
 
   /**
