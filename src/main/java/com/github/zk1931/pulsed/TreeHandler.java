@@ -63,7 +63,7 @@ public final class  TreeHandler extends HttpServlet {
         // watch/Put requests will be processed within single thread.
         long version = Long.parseLong(options.get("wait"));
         Command watch = new WatchCommand(path, version, recursive);
-        AsyncContext context = request.startAsync(request, response);
+        AsyncContext context = Utils.getContext(request, response);
         try {
           this.pd.proposeFlushRequest(watch, context);
         } catch (ZabException ex) {
@@ -91,7 +91,7 @@ public final class  TreeHandler extends HttpServlet {
       throws ServletException, IOException {
     String path = request.getPathInfo();
     Map<String, String> options = Utils.getQueries(request.getQueryString());
-    AsyncContext context = request.startAsync(request, response);
+    AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
     if (options.containsKey("recursive")) {
       recursive = true;
@@ -124,7 +124,7 @@ public final class  TreeHandler extends HttpServlet {
       throws ServletException, IOException {
     String path = request.getPathInfo();
     Map<String, String> options = Utils.getQueries(request.getQueryString());
-    AsyncContext context = request.startAsync(request, response);
+    AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
     if (options.containsKey("recursive")) {
       recursive = true;
@@ -143,7 +143,7 @@ public final class  TreeHandler extends HttpServlet {
       throws ServletException, IOException {
     String path = request.getPathInfo();
     Map<String, String> options = Utils.getQueries(request.getQueryString());
-    AsyncContext context = request.startAsync(request, response);
+    AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
     if (options.containsKey("recursive")) {
       recursive = true;

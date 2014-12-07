@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.AsyncContext;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,14 @@ public final class Utils {
   private static final Logger LOG = LoggerFactory.getLogger(Utils.class);
 
   private Utils() {}
+
+  public static AsyncContext getContext(HttpServletRequest request,
+                                        HttpServletResponse response) {
+    AsyncContext context = request.startAsync(request, response);
+    // No timeout.
+    context.setTimeout(0);
+    return context;
+  }
 
   public static String toJson(Object obj) {
     GsonBuilder builder = new GsonBuilder();
