@@ -25,7 +25,10 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -98,7 +101,15 @@ public final class Main {
     }
 
     Server server = new Server(Integer.parseInt(cmd.getOptionValue("port")));
-
+    // Suppress "Server" header in HTTP response.
+    for(Connector y : server.getConnectors()) {
+      for(ConnectionFactory x  : y.getConnectionFactories()) {
+        if(x instanceof HttpConnectionFactory) {
+          ((HttpConnectionFactory)x).getHttpConfiguration()
+                                    .setSendServerVersion(false);
+        }
+      }
+    }
     Pulsed pd = new Pulsed(cmd.getOptionValue("addr"),
                            cmd.getOptionValue("join"),
                            cmd.getOptionValue("dir"));
