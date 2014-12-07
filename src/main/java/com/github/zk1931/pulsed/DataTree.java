@@ -119,12 +119,13 @@ public class DataTree {
    * @param data the initial data of the node.
    * @param sessionID the ID of the session of node, -1 if it doesn't belong to
    * any sessions.
+   * @return the newly created file node.
    * @throws NotAlreadyExist if this path has arealdy existed in tree.
    * @throws PathNotExist if the path of its parent doesn't exist in tree.
    * @throws InvalidPath if the path is invalid.
    * @throws NotDirectory if the path goes through a non-directory node.
    */
-  public void createFile(String path,
+  public Node createFile(String path,
                          byte[] data,
                          long sessionID,
                          boolean recursive)
@@ -137,6 +138,8 @@ public class DataTree {
     this.root =
       createNode(this.root, path, data, sessionID, recursive, false, changes);
     triggerWatches(changes);
+    // The created node is the first one in queue.
+    return changes.get(0);
   }
 
   /**
@@ -145,12 +148,13 @@ public class DataTree {
    * @param path the path of node.
    * @param sessionID the ID of the session of node, -1 if it doesn't belong to
    * any sessions.
+   * @return the newly created directory node.
    * @throws NotAlreadyExist if this path has arealdy existed in tree.
    * @throws PathNotExist if the path of its parent doesn't exist in tree.
    * @throws InvalidPath if the path is invalid.
    * @throws NotDirectory if the path goes through a non-directory node.
    */
-  public void createDir(String path,
+  public Node createDir(String path,
                         long sessionID,
                         boolean recursive)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
@@ -162,6 +166,7 @@ public class DataTree {
     this.root =
       createNode(this.root, path, null, sessionID, recursive, true, changes);
     triggerWatches(changes);
+    return changes.get(0);
   }
 
   /**
@@ -169,6 +174,8 @@ public class DataTree {
    *
    * @param path the path of node.
    * @param recursive deletes all nodes under this directory as needed.
+   * @return the deleted node, if it's recursive deletion then returns the root
+   * node of the deleted subtree.
    * @throws PathNotExist if the path doesn't exist in tree.
    * @throws DirectoryNotEmpty delete a non-empty directory while recursive
    * parameter is false.
@@ -176,7 +183,7 @@ public class DataTree {
    * @throws DeleteRootDir trying to delete root directory.
    * @throws NotDirectory if the path goes through a non-directory node.
    */
-  public void deleteNode(String path,
+  public Node deleteNode(String path,
                          boolean recursive)
       throws PathNotExist, DirectoryNotEmpty, InvalidPath, DeleteRootDir,
              NotDirectory {
@@ -190,6 +197,7 @@ public class DataTree {
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)deleteNode(this.root, path, recursive, changes);
     triggerWatches(changes);
+    return changes.get(0);
   }
 
   /**
@@ -199,14 +207,14 @@ public class DataTree {
    * @param data the new data for node.
    * @param version updates data if the version matches the version of the
    * node, if the version is -1 then we'll always update the data.
-   * @return the new version of node.
+   * @return the updated node.
    * @throws PathNotExist if the path doesn't exist in tree.
    * @throws InvalidPath if the path is invalid.
    * @throws VersionNotMatch if the version doesn't match version of the node.
    * @throws DirectoryNode can't store data on node of directory type.
    * @throws NotDirectory if the path goes through a non-directory node.
    */
-  public long setData(String path, byte[] data, long version)
+  public Node setData(String path, byte[] data, long version)
       throws PathNotExist, InvalidPath, VersionNotMatch, DirectoryNode,
              NotDirectory {
     validatePath(path);
@@ -216,7 +224,7 @@ public class DataTree {
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)setData(this.root, path, data, version, changes);
     triggerWatches(changes);
-    return this.root.version;
+    return changes.get(0);
   }
 
   public void addWatch(Watch watch) {
@@ -298,12 +306,6 @@ public class DataTree {
           !recursive) {
         throw new DirectoryNotEmpty(curNode.fullPath + " is not empty.");
       }
-      if (curNode instanceof DirNode) {
-        // If it's directory node, deletes its children recursivly.
-        for (Node child : ((DirNode)curNode).children.values()) {
-          deleteNode(child, path, recursive, changes);
-        }
-      }
       Node ret;
       // version of -1 means deleted node.
       long version = -1;
@@ -318,7 +320,14 @@ public class DataTree {
                            curNode.sessionID,
                            ((FileNode)curNode).data);
       }
+      // Pre-order traversal.
       changes.add(ret);
+      if (curNode instanceof DirNode) {
+        // If it's directory node, deletes its children recursivly.
+        for (Node child : ((DirNode)curNode).children.values()) {
+          deleteNode(child, path, recursive, changes);
+        }
+      }
       return ret;
     }
     if (!(curNode instanceof DirNode)) {

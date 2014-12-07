@@ -31,15 +31,15 @@ public class PutCommand extends Command {
     this.recursive = recursive;
   }
 
-  void execute(DataTree tree)
+  Node execute(DataTree tree)
       throws PathNotExist, InvalidPath, VersionNotMatch, DirectoryNode,
              NotDirectory, NodeAlreadyExist {
     if (tree.exist(this.path)) {
       // If the node exists, treat the command as request of update.
-      tree.setData(this.path, this.data, -1);
+      return tree.setData(this.path, this.data, -1);
     } else {
       // Otherwise treat the command as request of creation.
-      tree.createFile(this.path, this.data, -1, recursive);
+      return tree.createFile(this.path, this.data, -1, recursive);
     }
   }
 
@@ -47,14 +47,9 @@ public class PutCommand extends Command {
     AsyncContext context = (AsyncContext)ctx;
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
-      execute(tree);
-      Node node = tree.getNode(this.path);
+      Node node = execute(tree);
       Utils.setHeader(node, response);
-      if (node.version == 0) {
-        Utils.replyCreated(response, context);
-      } else {
-        Utils.replyOK(response, context);
-      }
+      Utils.replyOK(response, context);
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
     } catch (TreeException ex) {

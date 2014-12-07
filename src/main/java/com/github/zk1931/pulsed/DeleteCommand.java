@@ -44,17 +44,18 @@ public class DeleteCommand extends Command {
     this.recursive = recursive;
   }
 
-  void execute(DataTree tree)
+  Node execute(DataTree tree)
       throws NotDirectory, PathNotExist, InvalidPath, DeleteRootDir,
              DirectoryNotEmpty {
-    tree.deleteNode(this.path, this.recursive);
+    return tree.deleteNode(this.path, this.recursive);
   }
 
   void executeAndReply(DataTree tree, Object ctx) {
     AsyncContext context = (AsyncContext)ctx;
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
-      execute(tree);
+      Node node = execute(tree);
+      Utils.setHeader(node, response);
       Utils.replyOK(response, context);
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
