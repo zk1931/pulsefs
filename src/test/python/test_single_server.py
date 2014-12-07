@@ -2,11 +2,11 @@ import json
 import logging
 import pytest
 import requests
-import unittest
+import uuid
 
 
 @pytest.mark.usefixtures("single_server")
-class SingleServerTest(unittest.TestCase):
+class TestSingleServer(object):
     """Single server tests.
 
     Base URL of the server (e.g. http://localhost:8080) can be accessed via
@@ -32,3 +32,25 @@ class SingleServerTest(unittest.TestCase):
         assert len(body["checksum"]) == 8
         int(body["checksum"], 16)
         assert res.headers["checksum"] == body["checksum"]
+
+    def test_encoded_url(self):
+        directory = "/" + str(uuid.uuid4())
+
+        # create a directory
+        requests.put(self.baseurl + directory + "?dir")
+
+        # create a file with an url-encoded filename
+        res = requests.put(self.baseurl + directory + "/%00", "test")
+        res = requests.get(self.baseurl + directory + "/%00")
+        assert res.headers["path"] == directory + "/%00"
+        assert res.content == "test"
+
+        # make sure the filename in directory listing remains url-encoded.
+        res = requests.get(self.baseurl + directory)
+        body = json.loads(res.content)
+        assert body["children"][0]["path"] == directory + "/%00"
+
+    def test_server_header(self):
+        """verify that the server header is not present"""
+        res = requests.get(self.baseurl)
+        assert "Server" not in res.headers
