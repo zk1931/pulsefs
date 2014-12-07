@@ -67,22 +67,17 @@ public final class  TreeHandler extends HttpServlet {
         try {
           this.pd.proposeFlushRequest(watch, context);
         } catch (ZabException ex) {
-          Utils.serviceUnavailable(response, context);
+          Utils.replyServiceUnavailable(response, context);
         }
       } else {
         // If it's not watch request, serves it directly.
         Node node = tree.getNode(path);
-        Utils.writeHeader(node, response);
-        if (node instanceof DirNode) {
-          Utils.writeChildren(node, response, recursive);
-        } else {
-          Utils.writeData(node, response);
-        }
+        Utils.replyNodeInfo(response, node, recursive);
       }
     } catch (DataTree.InvalidPath | NumberFormatException ex) {
-      Utils.badRequest(response, ex.getMessage());
+      Utils.replyBadRequest(response, ex.getMessage());
     } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
-      Utils.notFound(response, ex.getMessage());
+      Utils.replyNotFound(response, ex.getMessage());
     }
   }
 
@@ -114,7 +109,7 @@ public final class  TreeHandler extends HttpServlet {
       }
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
-      Utils.serviceUnavailable(response, context);
+      Utils.replyServiceUnavailable(response, context);
     }
   }
 
@@ -133,7 +128,7 @@ public final class  TreeHandler extends HttpServlet {
       Command cmd = new DeleteCommand(path, recursive);
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
-      Utils.serviceUnavailable(response, context);
+      Utils.replyServiceUnavailable(response, context);
     }
   }
 
@@ -160,7 +155,7 @@ public final class  TreeHandler extends HttpServlet {
       Command cmd = new CreateSeqFileCommand(path, value, recursive);
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
-      Utils.serviceUnavailable(response, context);
+      Utils.replyServiceUnavailable(response, context);
     }
   }
 

@@ -59,7 +59,7 @@ public class WatchCommand extends Command {
       if (node == null && version == -1) {
         // The node doesn't exist and the watch is for the deletion of the
         // node, replies it directly.
-        Utils.replyOK(response, null, context);
+        Utils.replyOK(response, context);
       } else if (node != null && watch.isTriggerable(node)) {
         // The watch is for the version and it's triggerable now, triggers  it
         // directly.
@@ -69,7 +69,7 @@ public class WatchCommand extends Command {
         tree.addWatch(watch);
       }
     } catch (TreeException ex) {
-      Utils.badRequest(response, ex.getMessage(), context);
+      Utils.replyBadRequest(response, ex.getMessage(), context);
     }
   }
 }

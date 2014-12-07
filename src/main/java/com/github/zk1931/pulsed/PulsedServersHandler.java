@@ -71,13 +71,13 @@ public final class PulsedServersHandler extends HttpServlet {
       throws ServletException, IOException {
     String peerId = request.getPathInfo().substring(1);
     if (!this.pd.getClusterMembers().contains(peerId)) {
-      Utils.badRequest(response, peerId + " is not in cluster.");
+      Utils.replyBadRequest(response, peerId + " is not in cluster.");
     } else {
       AsyncContext context = request.startAsync(request, response);
       try {
         this.pd.removePeer(peerId, context);
       } catch (ZabException ex) {
-        Utils.serviceUnavailable(response, context);
+        Utils.replyServiceUnavailable(response, context);
       }
     }
   }
