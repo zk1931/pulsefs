@@ -54,8 +54,9 @@ public final class Pulsed {
     }
     ZabConfig config = new ZabConfig();
     if (logDir == null) {
-      config.setLogDir(this.serverId);
+      logDir = this.serverId;
     }
+    config.setLogDir(logDir);
     if (joinPeer != null) {
       zab = new Zab(stateMachine, config, serverId, joinPeer);
     } else {

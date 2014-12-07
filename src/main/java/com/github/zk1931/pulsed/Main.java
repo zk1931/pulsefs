@@ -81,17 +81,19 @@ public final class Main {
 
     CommandLineParser parser = new BasicParser();
     CommandLine cmd;
+    String usage = "./bin/pulsed \"-port port -addr addr [-join peer] " +
+      "[-dir data_dir]\" or \"-port port -dir data_dir\"";
 
     try {
       cmd = parser.parse(options, args);
       if (cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("pulsed", options);
+        formatter.printHelp(usage, options);
         return;
       }
     } catch (ParseException exp) {
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("pulsed", options);
+      formatter.printHelp(usage, options);
       return;
     }
 
