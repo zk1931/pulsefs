@@ -61,7 +61,7 @@ public final class Utils {
     response.addHeader("version", Long.toString(node.version));
     response.addHeader("type", type);
     response.addHeader("path", node.fullPath);
-    response.addHeader("checksum", Long.toHexString(node.getChecksum()));
+    response.addHeader("checksum", String.format("%08X", node.getChecksum()));
     response.setStatus(HttpServletResponse.SC_OK);
     if (context != null) {
       context.complete();
@@ -123,7 +123,7 @@ public final class Utils {
     writer.name("path").value(node.fullPath);
     writer.name("sessionID").value(node.sessionID);
     writer.name("type").value(type);
-    writer.name("checksum").value(Long.toHexString(node.getChecksum()));
+    writer.name("checksum").value(String.format("%08X", node.getChecksum()));
     writer.endObject();
   }
 
@@ -134,7 +134,7 @@ public final class Utils {
     writer.name("path").value(node.fullPath);
     writer.name("sessionID").value(node.sessionID);
     writer.name("type").value(DIR_TYPE);
-    writer.name("checksum").value(Long.toHexString(node.getChecksum()));
+    writer.name("checksum").value(String.format("%08X", node.getChecksum()));
     writer.name("children");
     writeChildren(node, writer, recursive);
     writer.endObject();
