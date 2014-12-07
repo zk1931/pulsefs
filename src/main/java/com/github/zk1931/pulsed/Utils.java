@@ -165,10 +165,7 @@ public final class Utils {
   public static void badRequest(HttpServletResponse response, String desc,
                                 AsyncContext ctx) {
     try {
-      response.setContentType("text/html");
-      response.sendError(HttpServletResponse.SC_BAD_REQUEST, desc);
-    } catch (IOException ex) {
-      LOG.warn("IOExcepion {}", ex);
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST, desc);
     } finally {
       if (ctx != null) {
         ctx.complete();
@@ -187,10 +184,7 @@ public final class Utils {
   public static void notFound(HttpServletResponse response, String desc,
                               AsyncContext ctx) {
     try {
-      response.setContentType("text/html");
-      response.sendError(HttpServletResponse.SC_NOT_FOUND, desc);
-    } catch (IOException ex) {
-      LOG.warn("IOExcepion {}", ex);
+      response.setStatus(HttpServletResponse.SC_NOT_FOUND, desc);
     } finally {
       if (ctx != null) {
         ctx.complete();
