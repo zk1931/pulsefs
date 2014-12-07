@@ -37,6 +37,9 @@ public final class Utils {
 
   private static final Logger LOG = LoggerFactory.getLogger(Utils.class);
 
+  private static final String DIR_TYPE = "dir";
+  private static final String FILE_TYPE = "file";
+
   private Utils() {}
 
   public static String toJson(Object obj) {
@@ -51,9 +54,9 @@ public final class Utils {
 
   public static void writeHeader(Node node, HttpServletResponse response,
                                  AsyncContext context) {
-    String type = "file";
+    String type = FILE_TYPE;
     if (node instanceof DirNode) {
-      type = "directory";
+      type = DIR_TYPE;
     }
     response.addHeader("version", Long.toString(node.version));
     response.addHeader("type", type);
@@ -111,9 +114,9 @@ public final class Utils {
   }
 
   static void writeMetadata(Node node, JsonWriter writer) throws IOException {
-    String type = "file";
+    String type = FILE_TYPE;
     if (node instanceof DirNode) {
-      type = "directory";
+      type = DIR_TYPE;
     }
     writer.beginObject();
     writer.name("version").value(node.version);
@@ -130,7 +133,7 @@ public final class Utils {
     writer.name("version").value(node.version);
     writer.name("path").value(node.fullPath);
     writer.name("sessionID").value(node.sessionID);
-    writer.name("type").value("dir");
+    writer.name("type").value(DIR_TYPE);
     writer.name("checksum").value(Long.toHexString(node.getChecksum()));
     writer.name("children");
     writeChildren(node, writer, recursive);
