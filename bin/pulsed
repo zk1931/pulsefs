@@ -1,3 +1,5 @@
 #!/bin/bash
 
-java -cp ./bin/pulsed-jar-with-dependencies.jar com.github.zk1931.pulsed.Main "$@"
+# get the project root directory.
+ROOT="$( cd "$( dirname "$0" )/.." && pwd )"
+exec java -cp $ROOT/bin/pulsed-jar-with-dependencies.jar com.github.zk1931.pulsed.Main "$@"
