@@ -47,7 +47,7 @@ public class CreateSeqFileCommand extends Command {
     this.data = data.clone();
   }
 
-  void execute(DataTree tree)
+  Node execute(DataTree tree)
       throws PathNotExist, InvalidPath, DirectoryNode, NotDirectory,
              NodeAlreadyExist {
     Node node = tree.getNode(this.dirPath);
@@ -69,15 +69,16 @@ public class CreateSeqFileCommand extends Command {
     long newID = max + 1;
     String fileName = String.format("%019d", newID);
     String path = PathUtils.concat(this.dirPath, fileName);
-    tree.createFile(path, this.data, -1, recursive);
+    return tree.createFile(path, this.data, -1, recursive);
   }
 
   void executeAndReply(DataTree tree, Object ctx) {
     AsyncContext context = (AsyncContext)ctx;
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
-      execute(tree);
-      Utils.replyCreated(response, context);
+      Node node = execute(tree);
+      Utils.setHeader(node, response);
+      Utils.replyOK(response, context);
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
     } catch (TreeException ex) {

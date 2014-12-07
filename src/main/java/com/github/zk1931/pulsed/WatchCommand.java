@@ -42,7 +42,8 @@ public class WatchCommand extends Command {
     this.recursive = recursive;
   }
 
-  void execute(DataTree tree) {
+  Node execute(DataTree tree) {
+    return null;
   }
 
   void executeAndReply(DataTree tree, Object ctx) {
