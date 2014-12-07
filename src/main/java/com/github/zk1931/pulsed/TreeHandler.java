@@ -48,7 +48,7 @@ public final class  TreeHandler extends HttpServlet {
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    String path = request.getPathInfo();
+    String path = request.getRequestURI();
     DataTree tree = this.pd.getTree();
     Map<String, String> options = Utils.getQueries(request.getQueryString());
     boolean recursive = false;
@@ -89,7 +89,7 @@ public final class  TreeHandler extends HttpServlet {
   @Override
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    String path = request.getPathInfo();
+    String path = request.getRequestURI();
     Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
@@ -122,7 +122,7 @@ public final class  TreeHandler extends HttpServlet {
   protected void doDelete(HttpServletRequest request,
                           HttpServletResponse response)
       throws ServletException, IOException {
-    String path = request.getPathInfo();
+    String path = request.getRequestURI();
     Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
@@ -141,7 +141,7 @@ public final class  TreeHandler extends HttpServlet {
   protected void doPost(HttpServletRequest request,
                         HttpServletResponse response)
       throws ServletException, IOException {
-    String path = request.getPathInfo();
+    String path = request.getRequestURI();
     Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
