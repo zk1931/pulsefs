@@ -55,11 +55,11 @@ public class DeleteCommand extends Command {
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
       execute(tree);
-      Utils.replyOK(response, null, context);
+      Utils.replyOK(response, context);
     } catch (PathNotExist ex) {
-      Utils.notFound(response, ex.getMessage(), context);
+      Utils.replyNotFound(response, ex.getMessage(), context);
     } catch (TreeException ex) {
-      Utils.badRequest(response, ex.getMessage(), context);
+      Utils.replyBadRequest(response, ex.getMessage(), context);
     }
   }
 }

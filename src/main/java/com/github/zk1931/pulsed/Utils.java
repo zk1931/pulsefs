@@ -57,12 +57,7 @@ public final class Utils {
     return gson.toJson(obj);
   }
 
-  public static void writeHeader(Node node, HttpServletResponse response) {
-    writeHeader(node, response, null);
-  }
-
-  public static void writeHeader(Node node, HttpServletResponse response,
-                                 AsyncContext context) {
+  public static void setHeader(Node node, HttpServletResponse response) {
     String type = FILE_TYPE;
     if (node instanceof DirNode) {
       type = DIR_TYPE;
@@ -71,55 +66,92 @@ public final class Utils {
     response.addHeader("type", type);
     response.addHeader("path", node.fullPath);
     response.addHeader("checksum", String.format("%08X", node.getChecksum()));
+  }
+
+  public static void replyBadRequest(HttpServletResponse response,
+                                     String desc) {
+    replyBadRequest(response, desc, null);
+  }
+
+  public static void replyBadRequest(HttpServletResponse response,
+                                     String desc,
+                                     AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_BAD_REQUEST, desc);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
+  public static void replyOK(HttpServletResponse response) {
+    replyOK(response, null);
+  }
+
+  public static void replyOK(HttpServletResponse response,
+                             AsyncContext ctx) {
     response.setStatus(HttpServletResponse.SC_OK);
-    if (context != null) {
-      context.complete();
+    if (ctx != null) {
+      ctx.complete();
     }
   }
 
-  public static void writeData(Node node,
-                               HttpServletResponse response)
-      throws IOException {
-    writeData(node, response, null);
+  public static void replyCreated(HttpServletResponse response) {
+    replyCreated(response, null);
   }
 
-  public static void writeData(Node node,
-                               HttpServletResponse response,
-                               AsyncContext context) throws IOException {
-    if (!(node instanceof FileNode)) {
-      throw new RuntimeException("Node must be a file");
-    }
-    byte[] data = ((FileNode)node).data;
-    response.getOutputStream().write(data);
-    if (context != null) {
-      context.complete();
+  public static void replyCreated(HttpServletResponse response,
+                                  AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_CREATED);
+    if (ctx != null) {
+      ctx.complete();
     }
   }
 
-  public static void writeChildren(Node node,
-                                   HttpServletResponse response,
+  public static void replyNotFound(HttpServletResponse response,
+                                   String desc) {
+    replyNotFound(response, desc, null);
+  }
+
+  public static void replyNotFound(HttpServletResponse response,
+                                   String desc,
+                                   AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_NOT_FOUND, desc);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
+  public static void replyServiceUnavailable(HttpServletResponse response) {
+    replyServiceUnavailable(response, null);
+  }
+
+  public static void replyServiceUnavailable(HttpServletResponse response,
+                                             AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
+  public static void replyNodeInfo(HttpServletResponse response,
+                                   Node node,
                                    boolean recursive) throws IOException {
-    writeChildren(node, response, recursive, null);
+    replyNodeInfo(response, node, recursive, null);
   }
 
-  public static void writeChildren(Node node,
-                                   HttpServletResponse response,
+  public static void replyNodeInfo(HttpServletResponse response,
+                                   Node node,
                                    boolean recursive,
-                                   AsyncContext context) throws IOException {
-    if (!(node instanceof DirNode)) {
-      throw new RuntimeException("Node must be a directory");
-    }
-    JsonWriter writer = new JsonWriter(response.getWriter());
-    // 2-space indentation.
-    writer.setIndent("  ");
-    try {
+                                   AsyncContext ctx) throws IOException {
+    setHeader(node, response);
+    if (node instanceof FileNode) {
+      response.getOutputStream().write(((FileNode)node).data);
+    } else {
+      JsonWriter writer = new JsonWriter(response.getWriter());
+      // 2-space indentation.
+      writer.setIndent("  ");
       writeDir(node, writer, recursive);
-    } finally {
-      writer.close();
     }
-    if (context != null) {
-      context.complete();
-    }
+    replyOK(response, ctx);
   }
 
   static void writeMetadata(Node node, JsonWriter writer) throws IOException {
@@ -160,72 +192,6 @@ public final class Utils {
       }
     }
     writer.endArray();
-  }
-
-  public static void badRequest(HttpServletResponse response, String desc,
-                                AsyncContext ctx) {
-    try {
-      response.setStatus(HttpServletResponse.SC_BAD_REQUEST, desc);
-    } finally {
-      if (ctx != null) {
-        ctx.complete();
-      }
-    }
-  }
-
-  public static void badRequest(HttpServletResponse response, String desc) {
-    badRequest(response, desc, null);
-  }
-
-  public static void notFound(HttpServletResponse response, String desc) {
-    notFound(response, desc, null);
-  }
-
-  public static void notFound(HttpServletResponse response, String desc,
-                              AsyncContext ctx) {
-    try {
-      response.setStatus(HttpServletResponse.SC_NOT_FOUND, desc);
-    } finally {
-      if (ctx != null) {
-        ctx.complete();
-      }
-    }
-  }
-
-  public static void serviceUnavailable(HttpServletResponse response,
-                                        AsyncContext ctx) {
-    response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    response.setContentLength(0);
-    if (ctx != null) {
-      ctx.complete();
-    }
-  }
-
-  public static void serviceUnavailable(HttpServletResponse response) {
-    serviceUnavailable(response, null);
-  }
-
-  public static void replyOK(HttpServletResponse response, byte[] data) {
-    replyOK(response, data, null);
-  }
-
-  public static void replyOK(HttpServletResponse response, byte[] data,
-                             AsyncContext ctx) {
-    try {
-      response.setContentType("text/html");
-      response.setStatus(HttpServletResponse.SC_OK);
-      if (data != null) {
-        response.getOutputStream().write(data);
-        response.setContentLength(data.length);
-      }
-    } catch (IOException ex) {
-      LOG.error("IOException ", ex);
-    } finally {
-      if (ctx != null) {
-        ctx.complete();
-      }
-    }
   }
 
   // Parse the query string and convert to key-value pairs.

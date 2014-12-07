@@ -41,15 +41,9 @@ public class HttpWatch implements Watch {
     }
     HttpServletResponse response = (HttpServletResponse)(ctx.getResponse());
     try {
-      Utils.writeHeader(node, response);
-      if (node instanceof DirNode) {
-        Utils.writeChildren(node, response, cmd.recursive);
-      } else {
-        Utils.writeData(node, response);
-      }
-      this.ctx.complete();
+      Utils.replyNodeInfo(response, node, cmd.recursive, ctx);
     } catch (IOException ex) {
-      Utils.badRequest(response, ex.getMessage(), ctx);
+      Utils.replyBadRequest(response, ex.getMessage(), ctx);
     }
   }
 
