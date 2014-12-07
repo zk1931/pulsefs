@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import time
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 def get_executable():
