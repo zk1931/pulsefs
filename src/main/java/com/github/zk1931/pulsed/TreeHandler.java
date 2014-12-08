@@ -62,13 +62,8 @@ public final class  TreeHandler extends HttpServlet {
         // of serving it directly we need to flush it through Zab so all the
         // watch/Put requests will be processed within single thread.
         long version = Long.parseLong(options.get("wait"));
-        Command watch = new WatchCommand(path, version, recursive);
         AsyncContext context = Utils.getContext(request, response);
-        try {
-          this.pd.proposeFlushRequest(watch, context);
-        } catch (ZabException ex) {
-          Utils.replyServiceUnavailable(response, context);
-        }
+        processWatchRequest(context, tree, path, version, recursive);
       } else {
         // If it's not watch request, serves it directly.
         Node node = tree.getNode(path);
@@ -156,6 +151,41 @@ public final class  TreeHandler extends HttpServlet {
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
       Utils.replyServiceUnavailable(response, context);
+    }
+  }
+
+  void processWatchRequest(AsyncContext ctx,
+                           DataTree tree,
+                           String path,
+                           long version,
+                           boolean recursive) {
+    HttpServletResponse response = (HttpServletResponse)(ctx.getResponse());
+    HttpWatch watch = new HttpWatch(version, recursive, path, ctx);
+    Node node = null;
+    // Since other threads might be modifying the tree or adding watches,
+    // we need lock the whole tree.
+    synchronized(tree) {
+      try {
+        try {
+          node = tree.getNode(path);
+        } catch (DataTree.PathNotExist ex) {
+          node = null;
+        }
+        if (node == null && version == -1) {
+          // The node doesn't exist and the watch is for the deletion of the
+          // node, replies it directly.
+          Utils.replyOK(response, ctx);
+        } else if (node != null && watch.isTriggerable(node)) {
+          // The watch is for the version and it's triggerable now, triggers  it
+          // directly.
+          watch.trigger(node);
+        } else {
+          // Otherwise add the watch to DataTree.
+          tree.addWatch(watch);
+        }
+      } catch (DataTree.TreeException ex) {
+        Utils.replyBadRequest(response, ex.getMessage(), ctx);
+      }
     }
   }
 

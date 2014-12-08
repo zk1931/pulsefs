@@ -26,11 +26,15 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class HttpWatch implements Watch {
 
-  final WatchCommand cmd;
+  final long version;
+  final boolean recursive;
   final AsyncContext ctx;
+  final String path;
 
-  HttpWatch(WatchCommand cmd, AsyncContext ctx) {
-    this.cmd = cmd;
+  HttpWatch(long version, boolean recursive, String path, AsyncContext ctx) {
+    this.version = version;
+    this.recursive = recursive;
+    this.path = path;
     this.ctx = ctx;
   }
 
@@ -41,7 +45,7 @@ public class HttpWatch implements Watch {
     }
     HttpServletResponse response = (HttpServletResponse)(ctx.getResponse());
     try {
-      Utils.replyNodeInfo(response, node, cmd.recursive, ctx);
+      Utils.replyNodeInfo(response, node, recursive, ctx);
     } catch (IOException ex) {
       Utils.replyBadRequest(response, ex.getMessage(), ctx);
     }
@@ -49,15 +53,15 @@ public class HttpWatch implements Watch {
 
   @Override
   public String getPath() {
-    return this.cmd.path;
+    return path;
   }
 
   @Override
   public boolean isTriggerable(Node node) {
-    if (cmd.version == -1 && node.version != -1) {
+    if (version == -1 && node.version != -1) {
       return false;
     }
-    if (node.version >= cmd.version) {
+    if (node.version >= version) {
       return true;
     }
     return false;
