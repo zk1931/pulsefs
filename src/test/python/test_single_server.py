@@ -2,6 +2,8 @@ import json
 import logging
 import pytest
 import requests
+import time
+import threading
 import uuid
 
 
@@ -117,3 +119,67 @@ class TestSingleServer(object):
         res = requests.put(self.baseurl + "/", "test")
         assert res.status_code == 400
         assert res.reason == "/ is a directory"
+
+    def test_wait_create(self):
+        directory = "/" + str(uuid.uuid4())
+        threads = []
+        results = []
+
+        def get(url):
+            results.append(requests.get(url))
+
+        # wait for directory creation
+        for i in range(0, 3):
+            url = self.baseurl + directory + "?wait=0"
+            thread = threading.Thread(target=get, args=[url])
+            thread.start()
+            threads.append(thread)
+
+        # create a directory
+        res = requests.put(self.baseurl + directory + "?dir")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+
+        for thread in threads:
+            thread.join()
+
+        assert results[0].status_code == 200
+        assert results[0].headers["version"] == "0"
+        assert results[0].headers["type"] == "dir"
+        assert all(r.status_code == results[0].status_code for r in results)
+        assert all(r.headers == results[0].headers for r in results)
+        assert all(r.content == results[0].content for r in results)
+
+    def test_wait_file(self):
+        directory = "/" + str(uuid.uuid4())
+        threads = []
+        results = []
+
+        # create a file
+        res = requests.put(self.baseurl + directory + "/file?recursive")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+
+        def get(url):
+            results.append(requests.get(url))
+
+        # wait for version 10
+        for i in range(0, 3):
+            url = self.baseurl + directory + "/file?wait=10"
+            thread = threading.Thread(target=get, args=[url])
+            thread.start()
+            threads.append(thread)
+
+        for i in range(1, 11):
+            requests.put(self.baseurl + directory + "/file", str(i))
+
+        for thread in threads:
+            thread.join()
+
+        assert results[0].status_code == 200
+        assert results[0].headers["version"] == "10"
+        assert results[0].headers["type"] == "file"
+        assert results[0].content == "10"
+        assert all(r.status_code == results[0].status_code for r in results)
+        assert all(r.headers == results[0].headers for r in results)
+        assert all(r.content == results[0].content for r in results)
