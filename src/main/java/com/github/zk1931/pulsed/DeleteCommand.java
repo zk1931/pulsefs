@@ -23,6 +23,7 @@ import com.github.zk1931.pulsed.DataTree.InvalidPath;
 import com.github.zk1931.pulsed.DataTree.NotDirectory;
 import com.github.zk1931.pulsed.DataTree.PathNotExist;
 import com.github.zk1931.pulsed.DataTree.TreeException;
+import com.github.zk1931.pulsed.DataTree.VersionNotMatch;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.AsyncContext;
 import org.slf4j.Logger;
@@ -38,16 +39,18 @@ public class DeleteCommand extends Command {
 
   final String path;
   final boolean recursive;
+  final long version;
 
-  public DeleteCommand(String path, boolean recursive) {
+  public DeleteCommand(String path, boolean recursive, long version) {
     this.path = path;
     this.recursive = recursive;
+    this.version = version;
   }
 
   Node execute(DataTree tree)
       throws NotDirectory, PathNotExist, InvalidPath, DeleteRootDir,
-             DirectoryNotEmpty {
-    return tree.deleteNode(this.path, this.recursive);
+             DirectoryNotEmpty, VersionNotMatch {
+    return tree.deleteNode(this.path, this.version, this.recursive);
   }
 
   void executeAndReply(DataTree tree, Object ctx) {
@@ -59,6 +62,8 @@ public class DeleteCommand extends Command {
       Utils.replyOK(response, context);
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
+    } catch (VersionNotMatch ex) {
+      Utils.replyConflict(response, ex.getMessage(), context);
     } catch (TreeException ex) {
       Utils.replyBadRequest(response, ex.getMessage(), context);
     }

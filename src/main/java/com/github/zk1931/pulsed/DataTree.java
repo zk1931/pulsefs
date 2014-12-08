@@ -177,6 +177,9 @@ public class DataTree {
    * Deletes a node in tree.
    *
    * @param path the path of node.
+   * @param version if version is equal or greater than 0, delete the node if
+   * and only if the version matches the version of node. If it's recursive
+   * deletion then only compares the version of the root of the subtree.
    * @param recursive deletes all nodes under this directory as needed.
    * @return the deleted node, if it's recursive deletion then returns the root
    * node of the deleted subtree.
@@ -186,11 +189,13 @@ public class DataTree {
    * @throws InvalidPath if the path is invalid.
    * @throws DeleteRootDir trying to delete root directory.
    * @throws NotDirectory if the path goes through a non-directory node.
+   * @throws VersionNotMatch if the version doesn't match version of the node.
    */
   public Node deleteNode(String path,
+                         long version,
                          boolean recursive)
       throws PathNotExist, DirectoryNotEmpty, InvalidPath, DeleteRootDir,
-             NotDirectory {
+             NotDirectory, VersionNotMatch {
     validatePath(path);
     path = trimRoot(path);
     if (path.equals("")) {
@@ -199,7 +204,7 @@ public class DataTree {
     // Records the nodes that have been changed(version change/deleted)
     // by this request.
     List<Node> changes = new LinkedList<Node>();
-    this.root = (DirNode)deleteNode(this.root, path, recursive, changes);
+    this.root = (DirNode)deleteNode(root, path, version, recursive, changes);
     synchronized(this) {
       triggerWatches(changes);
     }
@@ -305,26 +310,29 @@ public class DataTree {
 
   Node deleteNode(Node curNode,
                   String path,
+                  long version,
                   boolean recursive,
                   List<Node> changes)
-      throws PathNotExist, DirectoryNotEmpty, NotDirectory {
+      throws PathNotExist, DirectoryNotEmpty, NotDirectory, VersionNotMatch {
     if (path.equals("")) {
       if (curNode instanceof DirNode &&
           !((DirNode)curNode).children.isEmpty() &&
           !recursive) {
         throw new DirectoryNotEmpty(curNode.fullPath + " is not empty");
       }
+      if (version >= 0 && curNode.version != version) {
+        throw new VersionNotMatch("Version " + version +
+            " doesn't match node version " + curNode.version);
+      }
       Node ret;
-      // version of -1 means deleted node.
-      long version = -1;
       if (curNode instanceof DirNode) {
         ret = new DirNode(curNode.fullPath,
-                          version,
+                          -1,
                           curNode.sessionID,
                           ((DirNode)curNode).children);
       } else {
         ret = new FileNode(curNode.fullPath,
-                           version,
+                           -1,
                            curNode.sessionID,
                            ((FileNode)curNode).data);
       }
@@ -333,7 +341,7 @@ public class DataTree {
       if (curNode instanceof DirNode) {
         // If it's directory node, deletes its children recursivly.
         for (Node child : ((DirNode)curNode).children.values()) {
-          deleteNode(child, path, recursive, changes);
+          deleteNode(child, path, -1, recursive, changes);
         }
       }
       return ret;
@@ -350,7 +358,7 @@ public class DataTree {
       throw new PathNotExist(concat(curNode.fullPath, path) +
           " does not exist");
     }
-    newChild = deleteNode(child, nextPath, recursive, changes);
+    newChild = deleteNode(child, nextPath, version, recursive, changes);
     Map<String, Node> newChildren = new TreeMap<>(((DirNode)curNode).children);
     if (newChild.version != -1) {
       newChildren.put(childName, newChild);

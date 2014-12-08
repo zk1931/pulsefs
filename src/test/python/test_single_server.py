@@ -183,3 +183,58 @@ class TestSingleServer(object):
         assert all(r.status_code == results[0].status_code for r in results)
         assert all(r.headers == results[0].headers for r in results)
         assert all(r.content == results[0].content for r in results)
+
+    def test_put_version(self):
+        directory = "/" + str(uuid.uuid4())
+        res = requests.put(self.baseurl + directory + "?dir")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["version"] == "0"
+
+        # version is -1, create a file /bar.
+        res = requests.put(self.baseurl + directory + "/bar?version=-1")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+
+        # version is 0, set file /foo.
+        res = requests.put(self.baseurl + directory + "/foo?version=0")
+        assert res.status_code == 404
+        assert res.reason == directory + "/foo does not exist"
+
+        # version is 0, set file /bar.
+        res = requests.put(self.baseurl + directory + "/bar?version=0")
+        assert res.status_code == 200
+        assert res.headers["version"] == "1"
+
+        # version is 1, set file /bar.
+        res = requests.put(self.baseurl + directory + "/bar?version=0")
+        assert res.status_code == 409
+        assert res.reason == "Version %s doesn't match node version %s" % (0,
+                                                                           1)
+
+        # set with valid version
+        res = requests.put(self.baseurl + directory + "/bar?version=1")
+        assert res.status_code == 200
+
+    def test_delete_version(self):
+        directory = "/" + str(uuid.uuid4())
+        res = requests.put(self.baseurl + directory + "?dir")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["version"] == "0"
+
+        # version is -1, create a file /bar.
+        res = requests.put(self.baseurl + directory + "/bar?version=-1")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["version"] == "0"
+
+        # delete it with wrong version
+        res = requests.delete(self.baseurl + directory + "/bar?version=1")
+        assert res.status_code == 409
+        assert res.reason == "Version %s doesn't match node version %s" % (1,
+                                                                           0)
+
+        # delete it with correct version
+        res = requests.delete(self.baseurl + directory + "/bar?version=0")
+        assert res.status_code == 200

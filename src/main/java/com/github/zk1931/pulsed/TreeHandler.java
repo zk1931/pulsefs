@@ -83,8 +83,14 @@ public final class  TreeHandler extends HttpServlet {
     Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
+    // Since the version -1 means creation, we use -2 as default(does
+    // creation/set depends the existence of the path).
+    long version = -2;
     if (options.containsKey("recursive")) {
       recursive = true;
+    }
+    if (options.containsKey("version")) {
+      version = Long.parseLong(options.get("version"));
     }
     try {
       Command cmd;
@@ -100,7 +106,7 @@ public final class  TreeHandler extends HttpServlet {
         } else {
           value = new byte[0];
         }
-        cmd = new PutCommand(path, value, recursive);
+        cmd = new PutCommand(path, value, recursive, version);
       }
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
@@ -116,11 +122,15 @@ public final class  TreeHandler extends HttpServlet {
     Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
     boolean recursive = false;
+    long version = -1;
     if (options.containsKey("recursive")) {
       recursive = true;
     }
+    if (options.containsKey("version")) {
+      version = Long.parseLong(options.get("version"));
+    }
     try {
-      Command cmd = new DeleteCommand(path, recursive);
+      Command cmd = new DeleteCommand(path, recursive, version);
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
       Utils.replyServiceUnavailable(response, context);
