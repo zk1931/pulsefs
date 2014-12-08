@@ -183,24 +183,26 @@ a directory recursively:
     HTTP/1.1 200 OK
     content-length: 0
 
-waiting for a change in a file or a directory
+waiting for a change on a file/directory
 ------------------------------
 
-- Wait for a file to get created. This returns immediately if the file already
-exists.
+- Wait for a file/directory to get created. This returns immediately if the
+file/directory already exists.
 
-    GET /file?wait=0 HTTP/1.1
+        GET /hello?wait=0 HTTP/1.1
 
-- Wait until the file version is at least 1. This returns immediately if the
-file version is already greater than or equal to 1. This also returns if the
-file doesn't exist, or it gets deleted before reaching version 1.
+- Wait until the file/directory version is at least 1. This returns immediately
+if the version is already greater than or equal to 1. The server responds with
+404 if the file/directory doesn't exist or it gets deleted before reaching
+version 1.
 
-    GET /file?wait=1 HTTP/1.1
+        GET /hello?wait=1 HTTP/1.1
 
-- Wait until the file gets deleted. This returns immediately if the file does
-not exist.
+- Wait until the file/directory gets deleted. Note that the server returns 404
+when the file/directory gets deleted. The server immediately responds with 404
+if the file/directory does not exist.
 
-    GET /file?wait=-1 HTTP/1.1
+        GET /file?wait=-1 HTTP/1.1
 
 creating a session
 ------------------
