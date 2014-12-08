@@ -24,22 +24,34 @@ public class PutCommand extends Command {
   final String path;
   final byte[] data;
   final boolean recursive;
+  final long version;
 
-  public PutCommand(String path, byte[] data, boolean recursive) {
+  public PutCommand(String path, byte[] data, boolean recursive, long version) {
     this.path = path;
     this.data = data.clone();
     this.recursive = recursive;
+    this.version = version;
   }
 
   Node execute(DataTree tree)
       throws PathNotExist, InvalidPath, VersionNotMatch, DirectoryNode,
              NotDirectory, NodeAlreadyExist {
-    if (tree.exist(this.path)) {
-      // If the node exists, treat the command as request of update.
-      return tree.setData(this.path, this.data, -1);
-    } else {
-      // Otherwise treat the command as request of creation.
+
+    if (version < -1) {
+      // If version is less than -1 then we do creation or set depends on if the
+      // path exists in the tree or not.
+      if (tree.exist(this.path)) {
+        // If the node exists, treat the command as request of update.
+        return tree.setData(this.path, this.data, -1);
+      } else {
+        // Otherwise treat the command as request of creation.
+        return tree.createFile(this.path, this.data, -1, recursive);
+      }
+    } else if (version == -1) {
+      // If the version is -1 then we can only do creation.
       return tree.createFile(this.path, this.data, -1, recursive);
+    } else {
+      return tree.setData(this.path, this.data, version);
     }
   }
 

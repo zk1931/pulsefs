@@ -110,11 +110,11 @@ public class DataTreeTest extends TestBase {
     tree.createFile("/foo/bar1", null, 0, false);
     tree.createFile("/foo/bar2", null, 0, false);
     Assert.assertEquals(4, tree.size());
-    tree.deleteNode("/foo/bar1", false);
+    tree.deleteNode("/foo/bar1", -1, false);
     Assert.assertEquals(3, tree.size());
-    tree.deleteNode("/foo/bar2", false);
+    tree.deleteNode("/foo/bar2", -1, false);
     Assert.assertEquals(2, tree.size());
-    tree.deleteNode("/foo", false);
+    tree.deleteNode("/foo", -1, false);
     Assert.assertEquals(1, tree.size());
   }
 
@@ -124,7 +124,7 @@ public class DataTreeTest extends TestBase {
     tree.createDir("/foo", 0, false);
     tree.createFile("/foo/bar1", null, 0, false);
     tree.createFile("/foo/bar2", null, 0, false);
-    tree.deleteNode("/foo", false);
+    tree.deleteNode("/foo", -1, false);
   }
 
   @Test
@@ -133,9 +133,48 @@ public class DataTreeTest extends TestBase {
     tree.createDir("/foo", 0, false);
     tree.createFile("/foo/bar1", null, 0, false);
     tree.createFile("/foo/bar2", null, 0, false);
-    tree.deleteNode("/foo", true);
+    tree.deleteNode("/foo", -1, true);
     Assert.assertEquals(1, tree.size());
     Assert.assertEquals(4, tree.getNode("/").version);
+  }
+
+  @Test
+  public void testDeleteWithMatchedVersion() throws Exception {
+    DataTree tree = new DataTree();
+    tree.createDir("/foo", 0, false);
+    tree.createFile("/foo/bar1", null, 0, false);
+    tree.createFile("/foo/bar2", null, 0, false);
+    //Now the /foo/bar1 should have versio 0.
+    tree.deleteNode("/foo/bar1", 0, false);
+    //Now the /foo/bar2 should have versio 0.
+    tree.deleteNode("/foo/bar2", 0, false);
+    //Now the /foo should have versio 4.
+    tree.deleteNode("/foo", 4, false);
+  }
+
+  @Test(expected=DataTree.VersionNotMatch.class)
+  public void testDeleteWithUnmatchedVersion() throws Exception {
+    DataTree tree = new DataTree();
+    tree.createDir("/foo", 0, false);
+    tree.createFile("/foo/bar1", null, 0, false);
+    tree.createFile("/foo/bar2", null, 0, false);
+    //Now the /foo/bar1 should have versio 0.
+    tree.deleteNode("/foo/bar1", 0, false);
+    //Now the /foo/bar2 should have versio 0.
+    tree.deleteNode("/foo/bar2", 0, false);
+    //Now the /foo should have versio 4.
+    tree.deleteNode("/foo", 0, false);
+  }
+
+  @Test
+  public void testDeleteWithMatchedVersionRecursive() throws Exception {
+    DataTree tree = new DataTree();
+    tree.createDir("/foo", 0, false);
+    tree.createFile("/foo/bar1", null, 0, false);
+    tree.createFile("/foo/bar2", null, 0, false);
+    //Now the /foo should have versio 4.
+    tree.deleteNode("/foo", 2, true);
+    Assert.assertEquals(1, tree.size());
   }
 
   @Test
@@ -155,7 +194,7 @@ public class DataTreeTest extends TestBase {
     Assert.assertEquals(2, tree.getNode("/foo").version);
     Assert.assertEquals(0, tree.getNode("/foo/bar1").version);
     Assert.assertEquals(0, tree.getNode("/foo/bar2").version);
-    tree.deleteNode("/foo/bar1", false);
+    tree.deleteNode("/foo/bar1", -1, false);
     Assert.assertEquals(4, tree.getNode("/").version);
     Assert.assertEquals(3, tree.getNode("/foo").version);
     Assert.assertEquals(0, tree.getNode("/foo/bar2").version);
@@ -166,7 +205,7 @@ public class DataTreeTest extends TestBase {
   @Test(expected=DataTree.DeleteRootDir.class)
   public void testDeleteRoot() throws Exception {
     DataTree tree = new DataTree();
-    tree.deleteNode("/", true);
+    tree.deleteNode("/", -1, true);
   }
 
   @Test
@@ -234,7 +273,7 @@ public class DataTreeTest extends TestBase {
     Assert.assertTrue(((DirNode)tree.getNode("/foo"))
                                     .children.containsKey("bar2"));
     // Delete one of children.
-    tree.deleteNode("/foo/bar1", false);
+    tree.deleteNode("/foo/bar1", -1, false);
     Assert.assertEquals(1, ((DirNode)tree.getNode("/foo")).children.size());
     Assert.assertFalse(((DirNode)tree.getNode("/foo"))
                                      .children.containsKey("bar1"));
@@ -258,7 +297,7 @@ public class DataTreeTest extends TestBase {
 
     changes = new LinkedList<Node>();
     tree.root =
-      (DirNode)tree.deleteNode(tree.root, "foo", true, changes);
+      (DirNode)tree.deleteNode(tree.root, "foo", -1, true, changes);
     // Two deleted nodes + one changed node(root node)
     Assert.assertEquals(3, changes.size());
     Assert.assertEquals(-1, changes.get(0).version);
