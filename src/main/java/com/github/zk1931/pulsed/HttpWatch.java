@@ -44,10 +44,15 @@ public class HttpWatch implements Watch {
       throw new RuntimeException("Not triggerable by " + node.version);
     }
     HttpServletResponse response = (HttpServletResponse)(ctx.getResponse());
-    try {
-      Utils.replyNodeInfo(response, node, recursive, ctx);
-    } catch (IOException ex) {
-      Utils.replyBadRequest(response, ex.getMessage(), ctx);
+    if (node.version == -1) {
+      // Node just gets deleted, reply NOT_FOUND.
+      Utils.replyNotFound(response, "not found", ctx);
+    } else {
+      try {
+        Utils.replyNodeInfo(response, node, recursive, ctx);
+      } catch (IOException ex) {
+        Utils.replyBadRequest(response, ex.getMessage(), ctx);
+      }
     }
   }
 
@@ -58,12 +63,13 @@ public class HttpWatch implements Watch {
 
   @Override
   public boolean isTriggerable(Node node) {
-    if (version == -1 && node.version != -1) {
-      return false;
-    }
-    if (node.version >= version) {
+    if (node.version == -1) {
+      // Node gets deleted, we must trigger the watch.
       return true;
     }
-    return false;
+    if (this.version == -1) {
+      return false;
+    }
+    return node.version >= this.version;
   }
 }

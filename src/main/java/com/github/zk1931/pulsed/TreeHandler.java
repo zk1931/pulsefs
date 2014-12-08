@@ -171,7 +171,7 @@ public final class  TreeHandler extends HttpServlet {
                            boolean recursive) {
     HttpServletResponse response = (HttpServletResponse)(ctx.getResponse());
     HttpWatch watch = new HttpWatch(version, recursive, path, ctx);
-    Node node = null;
+    Node node;
     // Since other threads might be modifying the tree or adding watches,
     // we need lock the whole tree.
     synchronized(tree) {
@@ -180,18 +180,20 @@ public final class  TreeHandler extends HttpServlet {
           node = tree.getNode(path);
         } catch (DataTree.PathNotExist ex) {
           node = null;
+          if (version != 0) {
+            Utils.replyNotFound(response, ex.getMessage(), ctx);
+          } else {
+            tree.addWatch(watch);
+          }
         }
-        if (node == null && version == -1) {
-          // The node doesn't exist and the watch is for the deletion of the
-          // node, replies it directly.
-          Utils.replyOK(response, ctx);
-        } else if (node != null && watch.isTriggerable(node)) {
-          // The watch is for the version and it's triggerable now, triggers  it
-          // directly.
-          watch.trigger(node);
-        } else {
-          // Otherwise add the watch to DataTree.
-          tree.addWatch(watch);
+        if (node != null) {
+          if (watch.isTriggerable(node)) {
+            // The watch is for the version and it's triggerable now, triggers
+            // it directly.
+            watch.trigger(node);
+          } else {
+            tree.addWatch(watch);
+          }
         }
       } catch (DataTree.TreeException ex) {
         Utils.replyBadRequest(response, ex.getMessage(), ctx);

@@ -133,7 +133,7 @@ public final class Utils {
   }
 
   public static void replyConflict(HttpServletResponse response, String desc) {
-    replyConflict(response, null);
+    replyConflict(response, desc, null);
   }
 
   public static void replyConflict(HttpServletResponse response,
