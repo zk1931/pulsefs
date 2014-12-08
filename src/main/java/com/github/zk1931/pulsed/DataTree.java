@@ -137,7 +137,9 @@ public class DataTree {
     List<Node> changes = new LinkedList<Node>();
     this.root =
       createNode(this.root, path, data, sessionID, recursive, false, changes);
-    triggerWatches(changes);
+    synchronized(this) {
+      triggerWatches(changes);
+    }
     // The created node is the first one in queue.
     return changes.get(0);
   }
@@ -165,7 +167,9 @@ public class DataTree {
     List<Node> changes = new LinkedList<Node>();
     this.root =
       createNode(this.root, path, null, sessionID, recursive, true, changes);
-    triggerWatches(changes);
+    synchronized(this) {
+      triggerWatches(changes);
+    }
     return changes.get(0);
   }
 
@@ -196,7 +200,9 @@ public class DataTree {
     // by this request.
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)deleteNode(this.root, path, recursive, changes);
-    triggerWatches(changes);
+    synchronized(this) {
+      triggerWatches(changes);
+    }
     return changes.get(0);
   }
 
@@ -223,7 +229,9 @@ public class DataTree {
     // by this request.
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)setData(this.root, path, data, version, changes);
-    triggerWatches(changes);
+    synchronized(this) {
+      triggerWatches(changes);
+    }
     return changes.get(0);
   }
 
