@@ -49,7 +49,11 @@ public class PutCommand extends Command {
     try {
       Node node = execute(tree);
       Utils.setHeader(node, response);
-      Utils.replyOK(response, context);
+      if (node.version == 0) {
+        Utils.replyCreated(response, context);
+      } else {
+        Utils.replyOK(response, context);
+      }
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
     } catch (TreeException ex) {

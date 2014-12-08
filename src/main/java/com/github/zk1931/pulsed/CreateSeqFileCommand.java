@@ -78,7 +78,7 @@ public class CreateSeqFileCommand extends Command {
     try {
       Node node = execute(tree);
       Utils.setHeader(node, response);
-      Utils.replyOK(response, context);
+      Utils.replyCreated(response, context);
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
     } catch (TreeException ex) {
