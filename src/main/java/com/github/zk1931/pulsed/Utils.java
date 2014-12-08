@@ -132,6 +132,19 @@ public final class Utils {
     }
   }
 
+  public static void replyConflict(HttpServletResponse response, String desc) {
+    replyConflict(response, null);
+  }
+
+  public static void replyConflict(HttpServletResponse response,
+                                   String desc,
+                                   AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_CONFLICT, desc);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
   public static void replyNodeInfo(HttpServletResponse response,
                                    Node node,
                                    boolean recursive) throws IOException {

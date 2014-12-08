@@ -62,6 +62,8 @@ public class DeleteCommand extends Command {
       Utils.replyOK(response, context);
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
+    } catch (VersionNotMatch ex) {
+      Utils.replyConflict(response, ex.getMessage(), context);
     } catch (TreeException ex) {
       Utils.replyBadRequest(response, ex.getMessage(), context);
     }

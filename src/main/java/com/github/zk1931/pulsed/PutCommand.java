@@ -68,6 +68,8 @@ public class PutCommand extends Command {
       }
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
+    } catch (VersionNotMatch ex) {
+      Utils.replyConflict(response, ex.getMessage(), context);
     } catch (TreeException ex) {
       Utils.replyBadRequest(response, ex.getMessage(), context);
     }
