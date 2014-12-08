@@ -47,6 +47,27 @@ creating a new regular file
     version: 0
     content-length: 0
 
+Note that this blindly puts the file regardless of whether it already exists or
+not. To make sure the file doesn't exist, do:
+
+    PUT /newfile2?version=-1 HTTP/1.1
+    content-length: 13
+
+    Hello, world!
+
+    HTTP/1.1 201 Created
+    version: 0
+    content-length: 0
+
+    PUT /newfile2?version=-1 HTTP/1.1
+    content-length: 13
+
+    Hello, world!
+
+    HTTP/1.1 409 Conflict
+    version: 0
+    content-length: 0
+
 updating an existing regular file
 ---------------------------------
 
@@ -59,10 +80,52 @@ updating an existing regular file
     version: 1
     content-length: 0
 
+Use the version parameter to do 'test and set':
+
+    PUT /newfile?version=1 HTTP/1.1
+    content-length: 21
+
+    Hello, updated world!
+
+    HTTP/1.1 200 OK
+    version: 2
+    content-length: 0
+
+    PUT /newfile?version=1 HTTP/1.1
+    content-length: 21
+
+    Hello, updated world!
+
+    HTTP/1.1 409 Conflict
+    version: 2
+    content-length: 0
+
 deleting an existing regular file
 ---------------------------------
 
     DELETE /newfile HTTP/1.1
+
+    HTTP/1.1 200 OK
+    content-length: 0
+
+Use the version parameter to do 'test and delete':
+
+    PUT /file HTTP/1.1
+    content-length: 13
+
+    Hello, world!
+
+    HTTP/1.1 201 Created
+    version: 0
+    content-length: 0
+
+    DELETE /file?version=1 HTTP/1.1
+
+    HTTP/1.1 409 Conflict
+    version: 0
+    content-length: 0
+
+    DELETE /file?version=0 HTTP/1.1
 
     HTTP/1.1 200 OK
     content-length: 0
@@ -179,6 +242,13 @@ Note that the directory must be empty or else DELETE request will fail. To delet
 a directory recursively:
 
     DELETE /newdir?recursive HTTP/1.1
+
+    HTTP/1.1 200 OK
+    content-length: 0
+
+You can also check the version of the directory before deleting:
+
+    DELETE /newdir?recursive&version=2 HTTP/1.1
 
     HTTP/1.1 200 OK
     content-length: 0
