@@ -238,3 +238,42 @@ class TestSingleServer(object):
         # delete it with correct version
         res = requests.delete(self.baseurl + directory + "/bar?version=0")
         assert res.status_code == 200
+
+    def test_delete_while_wait(self):
+        directory = "/" + str(uuid.uuid4())
+        res = requests.put(self.baseurl + directory + "?dir")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["version"] == "0"
+
+        # wait the version of /bar becomes 2 while /bar doesn't exist.
+        res = requests.get(self.baseurl + directory + "/bar?wait=2")
+        # we should return 404
+        assert res.status_code == 404
+        assert res.reason == directory + "/bar does not exist"
+        results = []
+
+        def get(url):
+            results.append(requests.get(url))
+
+        url = self.baseurl + directory + "/bar?wait=0"
+        thread = threading.Thread(target=get, args=[url])
+        thread.start()
+        # create /bar
+        res = requests.put(self.baseurl + directory + "/bar")
+        # wati watch returns.
+        thread.join()
+        # watch returns 200 success.
+        assert results[0].status_code == 200
+        assert results[0].headers["version"] == "0"
+
+        # wait version of /bar becomes 2.
+        url = self.baseurl + directory + "/bar?wait=2"
+        thread = threading.Thread(target=get, args=[url])
+        thread.start()
+
+        # delete /bar
+        res = requests.delete(self.baseurl + directory + "/bar")
+        thread.join()
+        # watch returns 404 not found.
+        assert results[1].status_code == 404
