@@ -97,17 +97,17 @@ public class DataTree {
       String name = head(path);
       Node child = temp.children.get(name);
       if (child == null) {
-        throw new PathNotExist(concat(temp.fullPath, path) + " doesn't exist.");
+        throw new PathNotExist(concat(temp.fullPath, path) + " does not exist");
       }
       if (!(child instanceof DirNode)) {
-        throw new NotDirectory(child.fullPath + " is not directory.");
+        throw new NotDirectory(child.fullPath + " is not a directory");
       }
       temp = (DirNode)child;
       path = tail(path);
     }
     Node child = temp.children.get(path);
     if (child == null) {
-      throw new PathNotExist(concat(temp.fullPath, path) + " doesn't exist.");
+      throw new PathNotExist(concat(temp.fullPath, path) + " does not exist");
     }
     return child;
   }
@@ -247,7 +247,7 @@ public class DataTree {
       childName = path;
       Node child = curNode.children.get(childName);
       if (child != null) {
-        throw new NodeAlreadyExist(child.fullPath + " already exists.");
+        throw new NodeAlreadyExist(child.fullPath + " already exists");
       }
       String fullPath = concat(curNode.fullPath, childName);
       if (dir) {
@@ -274,7 +274,7 @@ public class DataTree {
                             new TreeMap<String, Node>());
       }
       if (!(child instanceof DirNode)) {
-        throw new NotDirectory(child.fullPath + " is not directory.");
+        throw new NotDirectory(child.fullPath + " is not a directory");
       }
       newChild = createNode((DirNode)child,
                             nextPath,
@@ -304,7 +304,7 @@ public class DataTree {
       if (curNode instanceof DirNode &&
           !((DirNode)curNode).children.isEmpty() &&
           !recursive) {
-        throw new DirectoryNotEmpty(curNode.fullPath + " is not empty.");
+        throw new DirectoryNotEmpty(curNode.fullPath + " is not empty");
       }
       Node ret;
       // version of -1 means deleted node.
@@ -331,7 +331,7 @@ public class DataTree {
       return ret;
     }
     if (!(curNode instanceof DirNode)) {
-      throw new NotDirectory(curNode.fullPath + " is not directory.");
+      throw new NotDirectory(curNode.fullPath + " is not a directory");
     }
     Node newChild;
     DirNode newNode;
@@ -340,7 +340,7 @@ public class DataTree {
     Node child = ((DirNode)curNode).children.get(childName);
     if (child == null) {
       throw new PathNotExist(concat(curNode.fullPath, path) +
-          " doesn't exist");
+          " does not exist");
     }
     newChild = deleteNode(child, nextPath, recursive, changes);
     Map<String, Node> newChildren = new TreeMap<>(((DirNode)curNode).children);
@@ -370,7 +370,7 @@ public class DataTree {
             " doesn't match node version " + curNode.version);
       }
       if (curNode.isDirectory()) {
-        throw new DirectoryNode(curNode.fullPath + " is directory.");
+        throw new DirectoryNode(curNode.fullPath + " is a directory");
       }
       long newVersion = curNode.version + 1;
       Node ret = new FileNode(curNode.fullPath,
@@ -381,7 +381,7 @@ public class DataTree {
       return ret;
     }
     if (!(curNode instanceof DirNode)) {
-      throw new NotDirectory(curNode.fullPath + " is not directory.");
+      throw new NotDirectory(curNode.fullPath + " is not a directory");
     }
     Node newChild;
     DirNode newNode;
@@ -390,7 +390,7 @@ public class DataTree {
     Node child = ((DirNode)curNode).children.get(childName);
     if (child == null) {
       throw new PathNotExist(concat(curNode.fullPath, childName) +
-          " doesn't exist");
+          " does not exist");
     }
     newChild = setData(child, nextPath, data, version, changes);
     Map<String, Node> newChildren = new TreeMap<>(((DirNode)curNode).children);
@@ -504,7 +504,7 @@ public class DataTree {
    */
   public static class DeleteRootDir extends TreeException {
     DeleteRootDir() {
-      super("Can't delete root directory");
+      super("Cannot delete the root directory");
     }
   }
 
