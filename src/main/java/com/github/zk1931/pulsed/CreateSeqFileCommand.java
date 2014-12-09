@@ -25,7 +25,6 @@ import com.github.zk1931.pulsed.DataTree.PathNotExist;
 import com.github.zk1931.pulsed.DataTree.TreeException;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.AsyncContext;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,20 +53,7 @@ public class CreateSeqFileCommand extends Command {
     if (!(node instanceof DirNode)) {
       throw new NotDirectory(node.fullPath + " is not directory.");
     }
-    Map<String, Node> children = ((DirNode)node).children;
-    long max = -1;
-    for (Node child : children.values()) {
-      // File format is like : 0000000001
-      String name = PathUtils.name(child.fullPath);
-      if (name.matches("\\d{19}")) {
-        long id = Long.parseLong(name);
-        if (id > max) {
-          max = id;
-        }
-      }
-    }
-    long newID = max + 1;
-    String fileName = String.format("%019d", newID);
+    String fileName = String.format("%016d", node.version);
     String path = PathUtils.concat(this.dirPath, fileName);
     return tree.createFile(path, this.data, -1, recursive);
   }
