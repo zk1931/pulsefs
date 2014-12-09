@@ -20,49 +20,38 @@ package com.github.zk1931.pulsed;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Map;
 import java.util.zip.Adler32;
 
 /**
- * Directory Node.
+ * Traisient Directory Node.
  */
-public class DirNode extends Node {
+public class TransientDirNode extends DirNode {
+  final long transientDirChecksum;
 
-  final Map<String, Node> children;
-  final long dirChecksum;
-
-  public DirNode(String fullPath,
-                 long version,
-                 Map<String, Node> children) {
-    super(fullPath, version);
-    this.children = Collections.unmodifiableMap(children);
-    this.dirChecksum = calcChecksum();
-  }
-
-  @Override
-  public boolean isDirectory() {
-    return true;
-  }
-
-  @Override
-  public long getChecksum() {
-    return this.dirChecksum;
+  public TransientDirNode(String fullPath,
+                          long version,
+                          Map<String, Node> children) {
+    super(fullPath, version, children);
+    this.transientDirChecksum = calcChecksum();
   }
 
   @Override
   public String getNodeName() {
-    return "dir";
+    return "transient-dir";
+  }
+
+  @Override
+  public long getChecksum() {
+    return this.transientDirChecksum;
   }
 
   private long calcChecksum() {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     try (DataOutputStream dout = new DataOutputStream(bout)) {
-      dout.writeLong(version);
-      dout.writeBytes(fullPath);
-      for (Node child : children.values()) {
-        dout.writeLong(child.getChecksum());
-      }
+      dout.writeLong(this.dirChecksum);
+      // Just to distinguish itself from normal directory.
+      dout.writeLong(0xdeadbeaf);
       Adler32 adler = new Adler32();
       adler.update(bout.toByteArray());
       return adler.getValue();

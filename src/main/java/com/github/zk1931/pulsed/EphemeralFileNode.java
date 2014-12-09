@@ -20,49 +20,40 @@ package com.github.zk1931.pulsed;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Map;
 import java.util.zip.Adler32;
 
 /**
- * Directory Node.
+ * Ephemeral File Node.
  */
-public class DirNode extends Node {
+public class EphemeralFileNode extends FileNode {
+  final long sessionID;
+  final long ephemeralFileChecksum;
 
-  final Map<String, Node> children;
-  final long dirChecksum;
-
-  public DirNode(String fullPath,
-                 long version,
-                 Map<String, Node> children) {
-    super(fullPath, version);
-    this.children = Collections.unmodifiableMap(children);
-    this.dirChecksum = calcChecksum();
-  }
-
-  @Override
-  public boolean isDirectory() {
-    return true;
-  }
-
-  @Override
-  public long getChecksum() {
-    return this.dirChecksum;
+  public EphemeralFileNode(String fullPath,
+                           long version,
+                           long sessionID,
+                           byte[] data) {
+    super(fullPath, version, data);
+    this.sessionID = sessionID;
+    this.ephemeralFileChecksum = calcChecksum();
   }
 
   @Override
   public String getNodeName() {
-    return "dir";
+    return "ephemeral-file";
+  }
+
+  @Override
+  public long getChecksum() {
+    return this.ephemeralFileChecksum;
   }
 
   private long calcChecksum() {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     try (DataOutputStream dout = new DataOutputStream(bout)) {
-      dout.writeLong(version);
-      dout.writeBytes(fullPath);
-      for (Node child : children.values()) {
-        dout.writeLong(child.getChecksum());
-      }
+      // The checksum of parent class.
+      dout.writeLong(this.fileChecksum);
+      dout.writeLong(this.sessionID);
       Adler32 adler = new Adler32();
       adler.update(bout.toByteArray());
       return adler.getValue();

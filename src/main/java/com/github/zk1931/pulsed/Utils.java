@@ -20,6 +20,7 @@ package com.github.zk1931.pulsed;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
+import java.io.DataInputStream;
 import java.io.IOException;
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
@@ -34,9 +35,6 @@ public final class Utils {
 
   private static final Logger LOG = LoggerFactory.getLogger(Utils.class);
 
-  private static final String DIR_TYPE = "dir";
-  private static final String FILE_TYPE = "file";
-
   private Utils() {}
 
   public static AsyncContext getContext(HttpServletRequest request,
@@ -47,6 +45,18 @@ public final class Utils {
     return context;
   }
 
+  public static byte[] readData(HttpServletRequest request) throws IOException {
+    int length = request.getContentLength();
+    byte[] data;
+    if (length >= 0) {
+      data = new byte[length];
+      new DataInputStream(request.getInputStream()).readFully(data);
+    } else {
+      data = new byte[0];
+    }
+    return data;
+  }
+
   public static String toJson(Object obj) {
     GsonBuilder builder = new GsonBuilder();
     Gson gson = builder.setPrettyPrinting().create();
@@ -54,12 +64,8 @@ public final class Utils {
   }
 
   public static void setHeader(Node node, HttpServletResponse response) {
-    String type = FILE_TYPE;
-    if (node instanceof DirNode) {
-      type = DIR_TYPE;
-    }
     response.addHeader("version", Long.toString(node.version));
-    response.addHeader("type", type);
+    response.addHeader("type", node.getNodeName());
     response.addHeader("checksum", String.format("%08X", node.getChecksum()));
   }
 
@@ -163,17 +169,10 @@ public final class Utils {
   }
 
   static void writeMetadata(Node node, JsonWriter writer) throws IOException {
-    String type = FILE_TYPE;
-    if (node instanceof DirNode) {
-      type = DIR_TYPE;
-    }
     writer.beginObject();
     writer.name("version").value(node.version);
     writer.name("path").value(node.fullPath);
-    if (node instanceof FileNode && ((FileNode)node).sessionID != -1) {
-      writer.name("sessionID").value(((FileNode)node).sessionID);
-    }
-    writer.name("type").value(type);
+    writer.name("type").value(node.getNodeName());
     writer.name("checksum").value(String.format("%08X", node.getChecksum()));
     writer.endObject();
   }
@@ -183,10 +182,7 @@ public final class Utils {
     writer.beginObject();
     writer.name("version").value(node.version);
     writer.name("path").value(node.fullPath);
-    if (node instanceof FileNode && ((FileNode)node).sessionID != -1) {
-      writer.name("sessionID").value(((FileNode)node).sessionID);
-    }
-    writer.name("type").value(DIR_TYPE);
+    writer.name("type").value(node.getNodeName());
     writer.name("checksum").value(String.format("%08X", node.getChecksum()));
     writer.name("children");
     writeChildren(node, writer, recursive);

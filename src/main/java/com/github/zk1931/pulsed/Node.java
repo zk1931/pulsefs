@@ -41,6 +41,8 @@ public abstract class Node {
 
   public abstract long getChecksum();
 
+  public abstract String getNodeName();
+
   @Override
   public boolean equals(Object obj) {
     if (obj == null) {
