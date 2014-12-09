@@ -64,7 +64,6 @@ public final class Utils {
     }
     response.addHeader("version", Long.toString(node.version));
     response.addHeader("type", type);
-    response.addHeader("path", node.fullPath);
     response.addHeader("checksum", String.format("%08X", node.getChecksum()));
   }
 
