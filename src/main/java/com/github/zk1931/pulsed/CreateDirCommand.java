@@ -45,7 +45,7 @@ public class CreateDirCommand extends Command {
 
   Node execute(DataTree tree)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
-    return tree.createDir(this.path, -1, this.recursive);
+    return tree.createDir(this.path, this.recursive);
   }
 
   void executeAndReply(DataTree tree, Object ctx) {

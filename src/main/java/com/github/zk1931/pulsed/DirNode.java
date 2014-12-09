@@ -35,9 +35,8 @@ public class DirNode extends Node {
 
   public DirNode(String fullPath,
                  long version,
-                 long sessionID,
                  Map<String, Node> children) {
-    super(fullPath, version, sessionID);
+    super(fullPath, version);
     this.children = Collections.unmodifiableMap(children);
     this.checksum = calcChecksum();
   }

@@ -48,7 +48,6 @@ public class DataTree {
   public DataTree() {
     this.root = new DirNode(ROOT_PATH,
                             (long)0,
-                            (long)-1,
                             new TreeMap<String, Node>());
   }
 
@@ -148,8 +147,6 @@ public class DataTree {
    * Creates a node of directory type in tree.
    *
    * @param path the path of node.
-   * @param sessionID the ID of the session of node, -1 if it doesn't belong to
-   * any sessions.
    * @return the newly created directory node.
    * @throws NotAlreadyExist if this path has arealdy existed in tree.
    * @throws PathNotExist if the path of its parent doesn't exist in tree.
@@ -157,7 +154,6 @@ public class DataTree {
    * @throws NotDirectory if the path goes through a non-directory node.
    */
   public Node createDir(String path,
-                        long sessionID,
                         boolean recursive)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
     validatePath(path);
@@ -166,7 +162,7 @@ public class DataTree {
     // by this request.
     List<Node> changes = new LinkedList<Node>();
     this.root =
-      createNode(this.root, path, null, sessionID, recursive, true, changes);
+      createNode(this.root, path, null, -1, recursive, true, changes);
     synchronized(this) {
       triggerWatches(changes);
     }
@@ -265,7 +261,7 @@ public class DataTree {
       String fullPath = concat(curNode.fullPath, childName);
       if (dir) {
         Map<String, Node> children = new TreeMap<String, Node>();
-        newChild = new DirNode(fullPath, 0, sessionID, children);
+        newChild = new DirNode(fullPath, 0, children);
       } else {
         newChild = new FileNode(fullPath, 0, sessionID, data);
       }
@@ -283,7 +279,6 @@ public class DataTree {
         // Recursive creation, create a new intermediate node.
         child = new DirNode(concat(curNode.fullPath, childName),
                             0,
-                            -1,
                             new TreeMap<String, Node>());
       }
       if (!(child instanceof DirNode)) {
@@ -302,7 +297,6 @@ public class DataTree {
     long newVersion = curNode.version + 1;
     newNode = new DirNode(curNode.fullPath,
                           newVersion,
-                          curNode.sessionID,
                           newChildren);
     changes.add(newNode);
     return newNode;
@@ -328,12 +322,11 @@ public class DataTree {
       if (curNode instanceof DirNode) {
         ret = new DirNode(curNode.fullPath,
                           -1,
-                          curNode.sessionID,
                           ((DirNode)curNode).children);
       } else {
         ret = new FileNode(curNode.fullPath,
                            -1,
-                           curNode.sessionID,
+                           ((FileNode)curNode).sessionID,
                            ((FileNode)curNode).data);
       }
       // Pre-order traversal.
@@ -368,7 +361,6 @@ public class DataTree {
     long newVersion = curNode.version + 1;
     newNode = new DirNode(curNode.fullPath,
                           newVersion,
-                          curNode.sessionID,
                           newChildren);
     changes.add(newNode);
     return newNode;
@@ -391,7 +383,7 @@ public class DataTree {
       long newVersion = curNode.version + 1;
       Node ret = new FileNode(curNode.fullPath,
                               newVersion,
-                              curNode.sessionID,
+                              ((FileNode)curNode).sessionID,
                               data);
       changes.add(ret);
       return ret;
@@ -414,7 +406,6 @@ public class DataTree {
     long newVersion = curNode.version + 1;
     newNode = new DirNode(curNode.fullPath,
                           newVersion,
-                          curNode.sessionID,
                           newChildren);
     changes.add(newNode);
     return newNode;
