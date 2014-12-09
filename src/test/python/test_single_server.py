@@ -18,7 +18,6 @@ class TestSingleServer(object):
     @pytest.mark.first
     def test_verify_initial_state(self):
         res = requests.get(self.baseurl)
-        assert res.headers["path"] == "/"
         assert res.headers["type"] == "dir"
         assert res.headers["version"] == "0"
         body = json.loads(res.content)
@@ -44,7 +43,6 @@ class TestSingleServer(object):
         # create a file with an url-encoded filename
         res = requests.put(self.baseurl + directory + "/%00", "test")
         res = requests.get(self.baseurl + directory + "/%00")
-        assert res.headers["path"] == directory + "/%00"
         assert res.content == "test"
 
         # make sure the filename in directory listing remains url-encoded.
@@ -277,3 +275,24 @@ class TestSingleServer(object):
         thread.join()
         # watch returns 404 not found.
         assert results[1].status_code == 404
+
+    def test_sequential(self):
+        directory = "/" + str(uuid.uuid4())
+        res = requests.put(self.baseurl + directory + "?dir")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["version"] == "0"
+
+        res = requests.post(self.baseurl + directory)
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["Location"] is not None
+        path1 = res.headers["Location"]
+
+        res = requests.post(self.baseurl + directory)
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["Location"] is not None
+        path2 = res.headers["Location"]
+
+        assert path2 > path1

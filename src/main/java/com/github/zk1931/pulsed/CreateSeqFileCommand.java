@@ -63,6 +63,9 @@ public class CreateSeqFileCommand extends Command {
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
       Node node = execute(tree);
+      // Since user has not idea of the path of newly craeted sequential node,
+      // we need return it to user.
+      response.addHeader("Location", node.fullPath);
       Utils.setHeader(node, response);
       Utils.replyCreated(response, context);
     } catch (PathNotExist ex) {
