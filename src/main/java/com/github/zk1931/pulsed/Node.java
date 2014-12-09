@@ -31,17 +31,10 @@ public abstract class Node {
    */
   final long version;
 
-  /**
-   * The session ID of the owner of the node.
-   */
-  final long sessionID;
-
   public Node(String fullPath,
-              long version,
-              long sessionID) {
+              long version) {
     this.fullPath = fullPath;
     this.version = version;
-    this.sessionID = sessionID;
   }
 
   public abstract boolean isDirectory();

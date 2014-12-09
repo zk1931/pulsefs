@@ -175,7 +175,9 @@ public final class Utils {
     writer.beginObject();
     writer.name("version").value(node.version);
     writer.name("path").value(node.fullPath);
-    writer.name("sessionID").value(node.sessionID);
+    if (node instanceof FileNode && ((FileNode)node).sessionID != -1) {
+      writer.name("sessionID").value(((FileNode)node).sessionID);
+    }
     writer.name("type").value(type);
     writer.name("checksum").value(String.format("%08X", node.getChecksum()));
     writer.endObject();
@@ -186,7 +188,9 @@ public final class Utils {
     writer.beginObject();
     writer.name("version").value(node.version);
     writer.name("path").value(node.fullPath);
-    writer.name("sessionID").value(node.sessionID);
+    if (node instanceof FileNode && ((FileNode)node).sessionID != -1) {
+      writer.name("sessionID").value(((FileNode)node).sessionID);
+    }
     writer.name("type").value(DIR_TYPE);
     writer.name("checksum").value(String.format("%08X", node.getChecksum()));
     writer.name("children");

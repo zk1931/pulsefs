@@ -31,17 +31,20 @@ public class FileNode extends Node {
 
   final long checksum;
 
+  final long sessionID;
+
   public FileNode(String fullPath,
                   long version,
                   long sessionID,
                   byte[] data) {
-    super(fullPath, version, sessionID);
+    super(fullPath, version);
     if (data == null) {
       this.data = new byte[0];
     } else {
       this.data = data.clone();
     }
     this.checksum = calcChecksum();
+    this.sessionID = sessionID;
   }
 
   @Override
