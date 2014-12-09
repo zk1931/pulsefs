@@ -20,7 +20,6 @@ package com.github.zk1931.pulsed;
 import com.github.zk1931.jzab.ZabException;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.Map;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -50,18 +49,27 @@ public final class  TreeHandler extends HttpServlet {
       throws ServletException, IOException {
     String path = request.getRequestURI();
     DataTree tree = this.pd.getTree();
-    Map<String, String> options = Utils.getQueries(request.getQueryString());
-    boolean recursive = false;
-    if (options.containsKey("recursive")) {
-      recursive = true;
+    boolean recursive;
+    boolean wait;
+    long version = -1;
+    try {
+      // Parse the query parameters.
+      recursive = request.getParameter("recursive") != null;
+      wait = request.getParameter("wait") != null;
+      if (wait) {
+        version = Long.parseLong(request.getParameter("wait"));
+      }
+    } catch (IllegalArgumentException ex) {
+      Utils.replyBadRequest(response, ex.getMessage());
+      return;
     }
     try {
       PathUtils.validatePath(path);
-      if (options.containsKey("wait")) {
+      if (wait) {
         // If the parameters contain "wait" then it's a watch request, instead
         // of serving it directly we need to flush it through Zab so all the
         // watch/Put requests will be processed within single thread.
-        long version = Long.parseLong(options.get("wait"));
+        //long version = Long.parseLong(options.get("wait"));
         AsyncContext context = Utils.getContext(request, response);
         processWatchRequest(context, tree, path, version, recursive);
       } else {
@@ -80,21 +88,26 @@ public final class  TreeHandler extends HttpServlet {
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getRequestURI();
-    Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
-    boolean recursive = false;
     // Since the version -1 means creation, we use -2 as default(does
     // creation/set depends the existence of the path).
     long version = -2;
-    if (options.containsKey("recursive")) {
-      recursive = true;
-    }
-    if (options.containsKey("version")) {
-      version = Long.parseLong(options.get("version"));
+    boolean dir;
+    boolean recursive;
+    try {
+      // Parse the query parameters.
+      recursive = request.getParameter("recursive") != null;
+      dir = request.getParameter("dir") != null;
+      if (request.getParameter("version") != null) {
+        version = Long.parseLong(request.getParameter("version"));
+      }
+    } catch (IllegalArgumentException ex) {
+      Utils.replyBadRequest(response, ex.getMessage());
+      return;
     }
     try {
       Command cmd;
-      if (options.containsKey("dir")) {
+      if (dir) {
         // Means it's a directory.
         cmd = new CreateDirCommand(path, recursive);
       } else {
@@ -119,15 +132,18 @@ public final class  TreeHandler extends HttpServlet {
                           HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getRequestURI();
-    Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
-    boolean recursive = false;
+    boolean recursive;
     long version = -1;
-    if (options.containsKey("recursive")) {
-      recursive = true;
-    }
-    if (options.containsKey("version")) {
-      version = Long.parseLong(options.get("version"));
+    try {
+      // Parse the query parameters.
+      recursive = request.getParameter("recursive") != null;
+      if (request.getParameter("version") != null) {
+        version = Long.parseLong(request.getParameter("version"));
+      }
+    } catch (IllegalArgumentException ex) {
+      Utils.replyBadRequest(response, ex.getMessage());
+      return;
     }
     try {
       Command cmd = new DeleteCommand(path, recursive, version);
@@ -142,12 +158,8 @@ public final class  TreeHandler extends HttpServlet {
                         HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getRequestURI();
-    Map<String, String> options = Utils.getQueries(request.getQueryString());
     AsyncContext context = Utils.getContext(request, response);
-    boolean recursive = false;
-    if (options.containsKey("recursive")) {
-      recursive = true;
-    }
+    boolean recursive = request.getParameter("recursive") != null;
     try {
       int length = request.getContentLength();
       byte[] value;

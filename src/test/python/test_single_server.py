@@ -296,3 +296,21 @@ class TestSingleServer(object):
         path2 = res.headers["Location"]
 
         assert path2 > path1
+
+    def test_validate_query(self):
+        res = requests.get(self.baseurl)
+        assert res.status_code == 200
+        version = res.headers["version"]
+
+        res = requests.get(self.baseurl + "/?wait" + str(version))
+        assert res.status_code == 200
+
+        # invalid query.
+        res = requests.get(self.baseurl + "/?wait")
+        # bad query parameter
+        assert res.status_code == 400
+
+        # invalid query.
+        res = requests.get(self.baseurl + "/?wait=abc")
+        # bad query parameter
+        assert res.status_code == 400
