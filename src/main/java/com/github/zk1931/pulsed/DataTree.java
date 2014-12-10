@@ -140,7 +140,7 @@ public class DataTree {
   }
 
   /**
-   * Creates a node of ephemeral file type in tree.
+   * Creates a node of session file type in tree.
    *
    * @param path the path of node.
    * @param data the initial data of the node.
@@ -152,18 +152,18 @@ public class DataTree {
    * @throws InvalidPath if the path is invalid.
    * @throws NotDirectory if the path goes through a non-directory node.
    */
-  public Node createEphemeralFile(String path,
-                                  byte[] data,
-                                  long sessionID,
-                                  boolean recursive,
-                                  boolean isTransient)
+  public Node createSessionFile(String path,
+                                byte[] data,
+                                long sessionID,
+                                boolean recursive,
+                                boolean isTransient)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
     validatePath(path);
     // Records the nodes that have been changed(version change/newly created)
     // by this request.
     List<Node> changes = new LinkedList<Node>();
     // Constructs created node first.
-    Node createdNode = new EphemeralFileNode(path, 0, sessionID, data);
+    Node createdNode = new SessionFileNode(path, 0, sessionID, data);
     this.root = createNode(root, createdNode, trimRoot(path), recursive,
                            isTransient, changes);
     triggerWatches(changes);
@@ -355,11 +355,11 @@ public class DataTree {
         ret = new DirNode(curNode.fullPath,
                           -1,
                           ((DirNode)curNode).children);
-      } else if (curNode instanceof EphemeralFileNode) {
-        ret = new EphemeralFileNode(curNode.fullPath,
-                                    -1,
-                                    ((EphemeralFileNode)curNode).sessionID,
-                                    ((FileNode)curNode).data);
+      } else if (curNode instanceof SessionFileNode) {
+        ret = new SessionFileNode(curNode.fullPath,
+                                  -1,
+                                  ((SessionFileNode)curNode).sessionID,
+                                  ((FileNode)curNode).data);
 
       } else {
         ret = new FileNode(curNode.fullPath,

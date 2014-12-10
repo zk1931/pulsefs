@@ -23,29 +23,29 @@ import java.io.IOException;
 import java.util.zip.Adler32;
 
 /**
- * Ephemeral File Node.
+ * Session File Node.
  */
-public class EphemeralFileNode extends FileNode {
+public class SessionFileNode extends FileNode {
   final long sessionID;
-  final long ephemeralFileChecksum;
+  final long sessionFileChecksum;
 
-  public EphemeralFileNode(String fullPath,
-                           long version,
-                           long sessionID,
-                           byte[] data) {
+  public SessionFileNode(String fullPath,
+                         long version,
+                         long sessionID,
+                         byte[] data) {
     super(fullPath, version, data);
     this.sessionID = sessionID;
-    this.ephemeralFileChecksum = calcChecksum();
+    this.sessionFileChecksum = calcChecksum();
   }
 
   @Override
   public String getNodeName() {
-    return "ephemeral-file";
+    return "session-file";
   }
 
   @Override
   public long getChecksum() {
-    return this.ephemeralFileChecksum;
+    return this.sessionFileChecksum;
   }
 
   private long calcChecksum() {
