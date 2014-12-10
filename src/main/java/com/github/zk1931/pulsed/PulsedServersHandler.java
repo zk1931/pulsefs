@@ -17,11 +17,7 @@
 
 package com.github.zk1931.pulsed;
 
-import com.github.zk1931.jzab.ZabException;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -48,38 +44,30 @@ public final class PulsedServersHandler extends HttpServlet {
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    LOG.info("Get");
-    HashMap<String, Object> resp = new HashMap<>();
-    resp.put("leader", this.pd.getLeader());
-    if (this.pd.isLeader()) {
-      resp.put("active_members", this.pd.getActiveMembers());
-      resp.put("cluster_members", this.pd.getClusterMembers());
-    } else {
-      resp.put("cluster_members", this.pd.getClusterMembers());
+    String path = request.getRequestURI();
+    DataTree tree = this.pd.getTree();
+    try {
+      PathUtils.validatePath(path);
+      Node node = tree.getNode(path);
+      Utils.replyNodeInfo(response, node, false);
+    } catch (DataTree.InvalidPath ex) {
+      Utils.replyBadRequest(response, ex.getMessage());
+    } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
+      Utils.replyNotFound(response, ex.getMessage());
     }
-    String content = Utils.toJson(resp);
-    response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_OK);
-    response.setContentLength(content.length());
-    response.getOutputStream()
-            .write(content.getBytes(Charset.forName("UTF-8")));
   }
 
   @Override
   protected void doDelete(HttpServletRequest request,
                           HttpServletResponse response)
       throws ServletException, IOException {
-    String peerId = request.getPathInfo().substring(1);
-    if (!this.pd.getClusterMembers().contains(peerId)) {
-      Utils.replyBadRequest(response, peerId + " is not in cluster.");
-    } else {
-      AsyncContext context = request.startAsync(request, response);
-      try {
-        this.pd.removePeer(peerId, context);
-      } catch (ZabException ex) {
-        Utils.replyServiceUnavailable(response, context);
-      }
-    }
+    Utils.replyForbidden(response);
+  }
+
+  @Override
+  protected void doPut(HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException {
+    Utils.replyForbidden(response);
   }
 
   /**

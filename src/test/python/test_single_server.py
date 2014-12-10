@@ -19,12 +19,9 @@ class TestSingleServer(object):
     def test_verify_initial_state(self):
         res = requests.get(self.baseurl)
         assert res.headers["type"] == "dir"
-        assert res.headers["version"] == "0"
         body = json.loads(res.content)
-        assert body["children"] == []
         assert body["path"] == "/"
         assert body["type"] == "dir"
-        assert body["version"] == 0
 
         # make sure checksum is a 32-bit int in zero-padded hex, and the
         # checksum in the header and the checksum in the body match.
@@ -33,6 +30,7 @@ class TestSingleServer(object):
         assert len(body["checksum"]) == 8
         int(body["checksum"], 16)
         assert res.headers["checksum"] == body["checksum"]
+        assert body["children"][0]["path"] == "/pulsed"
 
     def test_encoded_url(self):
         directory = "/" + str(uuid.uuid4())
@@ -367,3 +365,22 @@ class TestSingleServer(object):
         requests.get(self.baseurl + directory + "/foo/bar").status_code = 404
         # make sure /foo gets deleted since it has no child anymore.
         requests.get(self.baseurl + directory + "/foo").status_code = 404
+
+    def test_pulsed_servers(self):
+        directory = "/pulsed/servers"
+        res = requests.get(self.baseurl + directory)
+        # make sure directory /pulsed/servers exists
+        assert res.status_code == 200
+        body = json.loads(res.content)
+        assert body["path"] == "/pulsed/servers"
+        assert body["children"][0]["path"] == directory + "/localhost:5000"
+
+        res = requests.put(self.baseurl + directory + "/file")
+        # can't create file under /pulsed/servers
+        assert res.status_code == 403
+        assert res.reason == "Forbidden"
+
+        res = requests.delete(self.baseurl + directory + "/localhost:5000")
+        # can't delete file under /pulsed/servers
+        assert res.status_code == 403
+        assert res.reason == "Forbidden"

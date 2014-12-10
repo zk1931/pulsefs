@@ -146,6 +146,18 @@ public final class Utils {
     }
   }
 
+  public static void replyForbidden(HttpServletResponse response) {
+    replyForbidden(response, null);
+  }
+
+  public static void replyForbidden(HttpServletResponse response,
+                                    AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
   public static void replyNodeInfo(HttpServletResponse response,
                                    Node node,
                                    boolean recursive) throws IOException {

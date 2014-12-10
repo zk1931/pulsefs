@@ -135,9 +135,7 @@ public class DataTree {
     Node createdNode = new FileNode(path, 0, data);
     this.root = createNode(root, createdNode, trimRoot(path), recursive,
                            isTransient, changes);
-    synchronized(this) {
-      triggerWatches(changes);
-    }
+    triggerWatches(changes);
     return createdNode;
   }
 
@@ -168,9 +166,7 @@ public class DataTree {
     Node createdNode = new EphemeralFileNode(path, 0, sessionID, data);
     this.root = createNode(root, createdNode, trimRoot(path), recursive,
                            isTransient, changes);
-    synchronized(this) {
-      triggerWatches(changes);
-    }
+    triggerWatches(changes);
     return createdNode;
   }
 
@@ -195,9 +191,7 @@ public class DataTree {
     Node createdNode = new DirNode(path, 0, new TreeMap<String, Node>());
     this.root =
       createNode(root, createdNode, trimRoot(path), recursive, false, changes);
-    synchronized(this) {
-      triggerWatches(changes);
-    }
+    triggerWatches(changes);
     return createdNode;
   }
 
@@ -233,9 +227,7 @@ public class DataTree {
     // by this request.
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)deleteNode(root, path, version, recursive, changes);
-    synchronized(this) {
-      triggerWatches(changes);
-    }
+    triggerWatches(changes);
     return changes.get(0);
   }
 
@@ -262,9 +254,7 @@ public class DataTree {
     // by this request.
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)setData(this.root, path, data, version, changes);
-    synchronized(this) {
-      triggerWatches(changes);
-    }
+    triggerWatches(changes);
     return changes.get(0);
   }
 
@@ -489,9 +479,11 @@ public class DataTree {
     return sum;
   }
 
-  private void triggerWatches(List<Node> changes) {
-    for (Node node: changes) {
-      this.watchManager.triggerAndRemoveWatches(node);
+  void triggerWatches(List<Node> changes) {
+    synchronized(this) {
+      for (Node node: changes) {
+        this.watchManager.triggerAndRemoveWatches(node);
+      }
     }
   }
 

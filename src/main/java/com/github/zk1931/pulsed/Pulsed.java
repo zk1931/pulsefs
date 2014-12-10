@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import javax.servlet.AsyncContext;
-import javax.servlet.http.HttpServletResponse;
 import com.github.zk1931.jzab.PendingRequests;
 import com.github.zk1931.jzab.StateMachine;
 import com.github.zk1931.jzab.Zab;
@@ -109,6 +108,17 @@ public final class Pulsed {
 
     final DataTree tree = new DataTree();
 
+    PulsedStateMachine() {
+      try {
+        // Initialzes special directories /pulsed
+        tree.createDir(PulsedConfig.PULSED_ROOT, false);
+        tree.createDir(PulsedConfig.PULSED_SERVERS_PATH, false);
+      } catch (DataTree.TreeException ex) {
+        LOG.error("Exception ", ex);
+        throw new RuntimeException(ex);
+      }
+    }
+
     @Override
     public ByteBuffer preprocess(Zxid zxid, ByteBuffer message) {
       return message;
@@ -131,12 +141,8 @@ public final class Pulsed {
 
     @Override
     public void removed(String peerId, Object ctx) {
-      AsyncContext context = (AsyncContext)ctx;
-      HttpServletResponse response =
-        (HttpServletResponse)(context.getResponse());
-      response.setContentType("text/html");
-      response.setStatus(HttpServletResponse.SC_OK);
-      context.complete();
+      RemoveCommand cmd = (RemoveCommand)ctx;
+      cmd.executeAndReply(this.tree, null);
     }
 
     @Override
@@ -171,6 +177,14 @@ public final class Pulsed {
       leader = serverId;
       activeMembers = activePeers;
       clusterMembers = clusterConfig;
+      Command cmd =
+        new ClusterChangeCommand(clusterMembers, activeMembers, serverId);
+      try {
+        ByteBuffer bb = Serializer.serialize(cmd);
+        zab.send(bb, null);
+      } catch (IOException | ZabException ex) {
+        LOG.error("Exception : ", ex);
+      }
     }
 
     @Override
