@@ -35,6 +35,28 @@ special version is used for file/directory creation as well as watching for file
 
 A special directory `/pulsed` is reserved for use by pulsed.
 
+retriving cluster info
+----------------------
+
+    GET /pulsed/servers/ HTTP/1.1
+    content-length: 0
+
+    HTTP/1.1 200 OK
+    {
+      "active_members":["localhost:50001","localhost:5000"],
+      "leader":"localhost:5000",
+      "cluster_members":["localhost:50001","localhost:5000"]
+    }
+
+removing server from cluster
+----------------------------
+
+    DELETE /pulsed/servers/localhost:5000 HTTP/1.1
+    content-length: 0
+
+    HTTP/1.1 200 OK
+    content-length: 0
+
 creating a new regular file
 ---------------------------
 
@@ -332,6 +354,108 @@ deleting a session
 
     HTTP/1.1 200 OK
     content-length: 0
+
+inspecting cluster servers
+--------------------------
+
+    GET /pulsed/servers HTTP/1.1
+
+    HTTP/1.1 200 OK
+    Date: Wed, 10 Dec 2014 05:24:37 GMT
+    version: 5
+    type: dir
+    checksum: 278C0B7E
+    Content-Length: 728
+
+    {
+        "version": 5,
+        "path": "/pulsed/servers",
+        "type": "dir",
+        "checksum": "278C0B7E",
+        "children": [
+            {
+                "version": 0,
+                "path": "/pulsed/servers/localhost:8080",
+                "type": "file",
+                "checksum": "CF200A90"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8081",
+              "type": "file",
+              "checksum": "CF210A91"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8082",
+              "type": "file",
+              "checksum": "FC7C0B8F"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8083",
+              "type": "file",
+              "checksum": "9A940961"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8084",
+              "type": "file",
+              "checksum": "9A950962"
+            }
+        ]
+    }
+
+watching changes of cluster servers
+-----------------------------------
+
+    GET /pulsed/servers?wait=1 HTTP/1.1
+
+    HTTP/1.1 200 OK
+    Date: Wed, 10 Dec 2014 05:24:37 GMT
+    version: 5
+    type: dir
+    checksum: 278C0B7E
+    Content-Length: 728
+
+    {
+        "version": 5,
+        "path": "/pulsed/servers",
+        "type": "dir",
+        "checksum": "278C0B7E",
+        "children": [
+            {
+                "version": 0,
+                "path": "/pulsed/servers/localhost:8080",
+                "type": "file",
+                "checksum": "CF200A90"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8081",
+              "type": "file",
+              "checksum": "CF210A91"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8082",
+              "type": "file",
+              "checksum": "FC7C0B8F"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8083",
+              "type": "file",
+              "checksum": "9A940961"
+            },
+            {
+              "version": 0,
+              "path": "/pulsed/servers/localhost:8084",
+              "type": "file",
+              "checksum": "9A950962"
+            }
+        ]
+    }
 
 executing multiple operations atomically
 ----------------------------------------
