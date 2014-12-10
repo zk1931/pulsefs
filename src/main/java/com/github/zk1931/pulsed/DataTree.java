@@ -27,6 +27,7 @@ import static com.github.zk1931.pulsed.PathUtils.validatePath;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,8 @@ public class DataTree {
   DirNode root = null;
 
   WatchManager watchManager = new WatchManager();
+
+  SessionFileManager sessionManager = new SessionFileManager();
 
   private static final Logger LOG = LoggerFactory.getLogger(DataTree.class);
 
@@ -167,6 +170,8 @@ public class DataTree {
     this.root = createNode(root, createdNode, trimRoot(path), recursive,
                            isTransient, changes);
     triggerWatches(changes);
+    // Adds the file to session.
+    this.sessionManager.addFileToSession(sessionID, path);
     return createdNode;
   }
 
@@ -228,7 +233,15 @@ public class DataTree {
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)deleteNode(root, path, version, recursive, changes);
     triggerWatches(changes);
-    return changes.get(0);
+    for (Node node : changes) {
+      if (node instanceof SessionFileNode) {
+        // IF it's a session file we also need to remove it from the map.
+        long sessionID = ((SessionFileNode)node).sessionID;
+        this.sessionManager.removeFileFromSession(sessionID, node.fullPath);
+      }
+    }
+    Node deletedNode = changes.get(0);
+    return deletedNode;
   }
 
   /**
@@ -255,7 +268,35 @@ public class DataTree {
     List<Node> changes = new LinkedList<Node>();
     this.root = (DirNode)setData(this.root, path, data, version, changes);
     triggerWatches(changes);
-    return changes.get(0);
+    Node updatedNode = changes.get(0);
+    return updatedNode;
+  }
+
+  /**
+   * Deletes all the files of the given session.
+   *
+   * @param sessionID the ID of session.
+   */
+  public void deleteSession(long sessionID) {
+    try {
+      Set<String> files = this.sessionManager.getSessionFiles(sessionID);
+      if (files == null) {
+        return;
+      }
+      List<Node> changes = new LinkedList<Node>();
+      DirNode newRoot = this.root;
+      for (String file : files) {
+        newRoot = (DirNode)deleteNode(newRoot, PathUtils.trimRoot(file), -1,
+                                      false, changes);
+        this.sessionManager.removeFileFromSession(sessionID, file);
+      }
+      // Enables changes.
+      this.root = newRoot;
+      triggerWatches(changes);
+    } catch (TreeException ex) {
+      LOG.error("Caught exception in deleteSession", ex);
+      throw new RuntimeException(ex);
+    }
   }
 
   public void addWatch(Watch watch) {
