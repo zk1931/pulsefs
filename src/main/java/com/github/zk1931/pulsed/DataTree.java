@@ -112,7 +112,37 @@ public class DataTree {
   }
 
   /**
-   * Creates a node of file type in tree.
+   * Creates a node of regular file type in tree.
+   *
+   * @param path the path of node.
+   * @param data the initial data of the node.
+   * @return the newly created file node.
+   * @throws NotAlreadyExist if this path has arealdy existed in tree.
+   * @throws PathNotExist if the path of its parent doesn't exist in tree.
+   * @throws InvalidPath if the path is invalid.
+   * @throws NotDirectory if the path goes through a non-directory node.
+   */
+  public Node createFile(String path,
+                         byte[] data,
+                         boolean recursive,
+                         boolean isTransient)
+      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+    validatePath(path);
+    // Records the nodes that have been changed(version change/newly created)
+    // by this request.
+    List<Node> changes = new LinkedList<Node>();
+    // Constructs created node first.
+    Node createdNode = new FileNode(path, 0, data);
+    this.root = createNode(root, createdNode, trimRoot(path), recursive,
+                           isTransient, changes);
+    synchronized(this) {
+      triggerWatches(changes);
+    }
+    return createdNode;
+  }
+
+  /**
+   * Creates a node of ephemeral file type in tree.
    *
    * @param path the path of node.
    * @param data the initial data of the node.
@@ -124,23 +154,24 @@ public class DataTree {
    * @throws InvalidPath if the path is invalid.
    * @throws NotDirectory if the path goes through a non-directory node.
    */
-  public Node createFile(String path,
-                         byte[] data,
-                         long sessionID,
-                         boolean recursive)
+  public Node createEphemeralFile(String path,
+                                  byte[] data,
+                                  long sessionID,
+                                  boolean recursive,
+                                  boolean isTransient)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
     validatePath(path);
-    path = trimRoot(path);
     // Records the nodes that have been changed(version change/newly created)
     // by this request.
     List<Node> changes = new LinkedList<Node>();
-    this.root =
-      createNode(this.root, path, data, sessionID, recursive, false, changes);
+    // Constructs created node first.
+    Node createdNode = new EphemeralFileNode(path, 0, sessionID, data);
+    this.root = createNode(root, createdNode, trimRoot(path), recursive,
+                           isTransient, changes);
     synchronized(this) {
       triggerWatches(changes);
     }
-    // The created node is the first one in queue.
-    return changes.get(0);
+    return createdNode;
   }
 
   /**
@@ -157,16 +188,17 @@ public class DataTree {
                         boolean recursive)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
     validatePath(path);
-    path = trimRoot(path);
     // Records the nodes that have been changed(version change/newly created)
     // by this request.
     List<Node> changes = new LinkedList<Node>();
+    // Constructs created node first.
+    Node createdNode = new DirNode(path, 0, new TreeMap<String, Node>());
     this.root =
-      createNode(this.root, path, null, -1, recursive, true, changes);
+      createNode(root, createdNode, trimRoot(path), recursive, false, changes);
     synchronized(this) {
       triggerWatches(changes);
     }
-    return changes.get(0);
+    return createdNode;
   }
 
   /**
@@ -241,11 +273,10 @@ public class DataTree {
   }
 
   DirNode createNode(DirNode curNode,
+                     Node createdNode,
                      String path,
-                     byte[] data,
-                     long sessionID,
                      boolean recursive,
-                     boolean dir,
+                     boolean isTransient,
                      List<Node> changes)
       throws NotDirectory, NodeAlreadyExist, PathNotExist {
     Node newChild;
@@ -258,13 +289,7 @@ public class DataTree {
       if (child != null) {
         throw new NodeAlreadyExist(child.fullPath + " already exists");
       }
-      String fullPath = concat(curNode.fullPath, childName);
-      if (dir) {
-        Map<String, Node> children = new TreeMap<String, Node>();
-        newChild = new DirNode(fullPath, 0, children);
-      } else {
-        newChild = new FileNode(fullPath, 0, sessionID, data);
-      }
+      newChild = createdNode;
       changes.add(newChild);
     } else {
       // There's still '/' in path, we'll continue recursion.
@@ -277,27 +302,39 @@ public class DataTree {
               " doesn't exist");
         }
         // Recursive creation, create a new intermediate node.
-        child = new DirNode(concat(curNode.fullPath, childName),
-                            0,
-                            new TreeMap<String, Node>());
+        if (isTransient) {
+          child = new TransientDirNode(concat(curNode.fullPath, childName),
+                                       0,
+                                       new TreeMap<String, Node>());
+        } else {
+          child = new DirNode(concat(curNode.fullPath, childName),
+                              0,
+                              new TreeMap<String, Node>());
+        }
       }
       if (!(child instanceof DirNode)) {
         throw new NotDirectory(child.fullPath + " is not a directory");
       }
       newChild = createNode((DirNode)child,
+                            createdNode,
                             nextPath,
-                            data,
-                            sessionID,
                             recursive,
-                            dir,
+                            isTransient,
                             changes);
     }
     Map<String, Node> newChildren = new TreeMap<>(curNode.children);
     newChildren.put(childName, newChild);
     long newVersion = curNode.version + 1;
-    newNode = new DirNode(curNode.fullPath,
-                          newVersion,
-                          newChildren);
+    if (curNode instanceof TransientDirNode) {
+      newNode = new TransientDirNode(curNode.fullPath,
+                                     newVersion,
+                                     newChildren);
+
+    } else {
+      newNode = new DirNode(curNode.fullPath,
+                            newVersion,
+                            newChildren);
+    }
     changes.add(newNode);
     return newNode;
   }
@@ -319,14 +356,24 @@ public class DataTree {
             " doesn't match node version " + curNode.version);
       }
       Node ret;
-      if (curNode instanceof DirNode) {
+      if (curNode instanceof TransientDirNode) {
+        ret = new TransientDirNode(curNode.fullPath,
+                                   -1,
+                                   ((DirNode)curNode).children);
+
+      } else if (curNode instanceof DirNode) {
         ret = new DirNode(curNode.fullPath,
                           -1,
                           ((DirNode)curNode).children);
+      } else if (curNode instanceof EphemeralFileNode) {
+        ret = new EphemeralFileNode(curNode.fullPath,
+                                    -1,
+                                    ((EphemeralFileNode)curNode).sessionID,
+                                    ((FileNode)curNode).data);
+
       } else {
         ret = new FileNode(curNode.fullPath,
                            -1,
-                           ((FileNode)curNode).sessionID,
                            ((FileNode)curNode).data);
       }
       // Pre-order traversal.
@@ -358,10 +405,23 @@ public class DataTree {
     } else {
       newChildren.remove(childName);
     }
-    long newVersion = curNode.version + 1;
-    newNode = new DirNode(curNode.fullPath,
-                          newVersion,
-                          newChildren);
+    long newVersion;
+    if (curNode instanceof TransientDirNode && newChildren.isEmpty()) {
+      // If it's transient directory and it has no child, deletes it self.
+      newVersion = -1;
+    } else {
+      newVersion = curNode.version + 1;
+    }
+    if (curNode instanceof TransientDirNode) {
+      newNode = new TransientDirNode(curNode.fullPath,
+                                     newVersion,
+                                     newChildren);
+
+    } else {
+      newNode = new DirNode(curNode.fullPath,
+                            newVersion,
+                            newChildren);
+    }
     changes.add(newNode);
     return newNode;
   }
@@ -383,7 +443,6 @@ public class DataTree {
       long newVersion = curNode.version + 1;
       Node ret = new FileNode(curNode.fullPath,
                               newVersion,
-                              ((FileNode)curNode).sessionID,
                               data);
       changes.add(ret);
       return ret;
@@ -404,9 +463,16 @@ public class DataTree {
     Map<String, Node> newChildren = new TreeMap<>(((DirNode)curNode).children);
     newChildren.put(childName, newChild);
     long newVersion = curNode.version + 1;
-    newNode = new DirNode(curNode.fullPath,
-                          newVersion,
-                          newChildren);
+    if (curNode instanceof TransientDirNode) {
+      newNode = new TransientDirNode(curNode.fullPath,
+                                     newVersion,
+                                     newChildren);
+
+    } else {
+      newNode = new DirNode(curNode.fullPath,
+                            newVersion,
+                            newChildren);
+    }
     changes.add(newNode);
     return newNode;
   }

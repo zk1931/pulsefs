@@ -55,7 +55,7 @@ public class CreateSeqFileCommand extends Command {
     }
     String fileName = String.format("%016d", node.version);
     String path = PathUtils.concat(this.dirPath, fileName);
-    return tree.createFile(path, this.data, -1, recursive);
+    return tree.createFile(path, this.data, recursive, false);
   }
 
   void executeAndReply(DataTree tree, Object ctx) {

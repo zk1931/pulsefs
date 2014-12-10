@@ -26,16 +26,11 @@ import java.util.zip.Adler32;
  * File Node.
  */
 public class FileNode extends Node {
-
   final byte[] data;
-
-  final long checksum;
-
-  final long sessionID;
+  final long fileChecksum;
 
   public FileNode(String fullPath,
                   long version,
-                  long sessionID,
                   byte[] data) {
     super(fullPath, version);
     if (data == null) {
@@ -43,8 +38,7 @@ public class FileNode extends Node {
     } else {
       this.data = data.clone();
     }
-    this.checksum = calcChecksum();
-    this.sessionID = sessionID;
+    this.fileChecksum = calcChecksum();
   }
 
   @Override
@@ -54,7 +48,12 @@ public class FileNode extends Node {
 
   @Override
   public long getChecksum() {
-    return this.checksum;
+    return this.fileChecksum;
+  }
+
+  @Override
+  public String getNodeName() {
+    return "file";
   }
 
   private long calcChecksum() {
@@ -62,7 +61,6 @@ public class FileNode extends Node {
     try (DataOutputStream dout = new DataOutputStream(bout)) {
       dout.write(data);
       dout.writeLong(version);
-      dout.writeLong(sessionID);
       dout.writeBytes(fullPath);
       Adler32 adler = new Adler32();
       adler.update(bout.toByteArray());

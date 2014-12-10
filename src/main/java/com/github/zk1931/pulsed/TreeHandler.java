@@ -18,7 +18,6 @@
 package com.github.zk1931.pulsed;
 
 import com.github.zk1931.jzab.ZabException;
-import java.io.DataInputStream;
 import java.io.IOException;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
@@ -94,10 +93,13 @@ public final class  TreeHandler extends HttpServlet {
     long version = -2;
     boolean dir;
     boolean recursive;
+    boolean isTransient;
+    byte[] data = Utils.readData(request);
     try {
       // Parse the query parameters.
       recursive = request.getParameter("recursive") != null;
       dir = request.getParameter("dir") != null;
+      isTransient = request.getParameter("transient") != null;
       if (request.getParameter("version") != null) {
         version = Long.parseLong(request.getParameter("version"));
       }
@@ -111,15 +113,7 @@ public final class  TreeHandler extends HttpServlet {
         // Means it's a directory.
         cmd = new CreateDirCommand(path, recursive);
       } else {
-        int length = request.getContentLength();
-        byte[] value;
-        if (length >= 0) {
-          value = new byte[length];
-          new DataInputStream(request.getInputStream()).readFully(value);
-        } else {
-          value = new byte[0];
-        }
-        cmd = new PutCommand(path, value, recursive, version);
+        cmd = new PutCommand(path, data, recursive, version, isTransient);
       }
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
@@ -159,17 +153,10 @@ public final class  TreeHandler extends HttpServlet {
       throws ServletException, IOException {
     String path = request.getRequestURI();
     AsyncContext context = Utils.getContext(request, response);
+    byte[] data = Utils.readData(request);
     boolean recursive = request.getParameter("recursive") != null;
     try {
-      int length = request.getContentLength();
-      byte[] value;
-      if (length >= 0) {
-        value = new byte[length];
-        new DataInputStream(request.getInputStream()).readFully(value);
-      } else {
-        value = new byte[0];
-      }
-      Command cmd = new CreateSeqFileCommand(path, value, recursive);
+      Command cmd = new CreateSeqFileCommand(path, data, recursive);
       this.pd.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
       Utils.replyServiceUnavailable(response, context);

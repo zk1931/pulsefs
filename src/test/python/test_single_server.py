@@ -314,3 +314,56 @@ class TestSingleServer(object):
         res = requests.get(self.baseurl + "/?wait=abc")
         # bad query parameter
         assert res.status_code == 400
+
+    def test_transient_node(self):
+        directory = "/" + str(uuid.uuid4())
+        res = requests.put(self.baseurl + directory + "?dir")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+        assert res.headers["version"] == "0"
+
+        file1 = self.baseurl + directory + "/foo/bar/file1"
+        file2 = self.baseurl + directory + "/foo/bar/file2"
+        # create file1
+        res = requests.put(file1 + "?recursive&transient")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+
+        # create file2
+        res = requests.put(file2 + "?recursive&transient")
+        assert res.status_code == 201
+        assert res.reason == "Created"
+
+        res = requests.get(self.baseurl + directory + "/foo/bar")
+        assert res.status_code == 200
+        # Make sure it's transient node.
+        assert res.headers["type"] == "transient-dir"
+
+        res = requests.get(self.baseurl + directory + "/foo")
+        assert res.status_code == 200
+        # Make sure it's transient node.
+        assert res.headers["type"] == "transient-dir"
+
+        # delete file1
+        res = requests.delete(file1)
+        assert res.status_code == 200
+
+        # make sure file1 gets deleted
+        requests.get(file1).status_code = 404
+        # make sure file2 still exists
+        requests.get(file2).status_code = 200
+        # make sure /foo/bar still exists
+        requests.get(self.baseurl + directory + "/foo/bar").status_code = 200
+        # make sure /foo still exists
+        requests.get(self.baseurl + directory + "/foo").status_code = 200
+
+        # delete file2
+        res = requests.delete(file2)
+        assert res.status_code == 200
+
+        # make sure file2 gets deleted
+        requests.get(file2).status_code = 404
+        # make sure /foo/bar gets deleted since it has no child anymore.
+        requests.get(self.baseurl + directory + "/foo/bar").status_code = 404
+        # make sure /foo gets deleted since it has no child anymore.
+        requests.get(self.baseurl + directory + "/foo").status_code = 404

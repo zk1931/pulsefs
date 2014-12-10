@@ -42,12 +42,15 @@ public class PutCommand extends Command {
   final byte[] data;
   final boolean recursive;
   final long version;
+  final boolean isTransient;
 
-  public PutCommand(String path, byte[] data, boolean recursive, long version) {
+  public PutCommand(String path, byte[] data, boolean recursive, long version,
+                    boolean isTransient) {
     this.path = path;
     this.data = data.clone();
     this.recursive = recursive;
     this.version = version;
+    this.isTransient = isTransient;
   }
 
   Node execute(DataTree tree)
@@ -57,18 +60,18 @@ public class PutCommand extends Command {
     if (version < -1) {
       // If version is less than -1 then we do creation or set depends on if the
       // path exists in the tree or not.
-      if (tree.exist(this.path)) {
+      if (tree.exist(path)) {
         // If the node exists, treat the command as request of update.
-        return tree.setData(this.path, this.data, -1);
+        return tree.setData(path, data, -1);
       } else {
         // Otherwise treat the command as request of creation.
-        return tree.createFile(this.path, this.data, -1, recursive);
+        return tree.createFile(path, data, recursive, isTransient);
       }
     } else if (version == -1) {
       // If the version is -1 then we can only do creation.
-      return tree.createFile(this.path, this.data, -1, recursive);
+      return tree.createFile(path, data, recursive, isTransient);
     } else {
-      return tree.setData(this.path, this.data, version);
+      return tree.setData(path, data, version);
     }
   }
 

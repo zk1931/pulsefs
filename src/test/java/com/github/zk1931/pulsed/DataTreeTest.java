@@ -67,22 +67,22 @@ public class DataTreeTest extends TestBase {
     Assert.assertEquals(1, tree.size());
     tree.createDir("/foo", false);
     Assert.assertEquals(2, tree.size());
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     Assert.assertEquals(4, tree.size());
   }
 
   @Test(expected=DataTree.PathNotExist.class)
   public void testCreateUnderNonexistingPath() throws Exception {
     DataTree tree = new DataTree();
-    tree.createFile("/foo/bar", null, 0, false);
+    tree.createFile("/foo/bar", null, false, false);
   }
 
   @Test
   public void testRecursiveCreate() throws Exception {
     DataTree tree = new DataTree();
     // We'll create intermediate node /foo
-    tree.createFile("/foo/bar", "helloworld".getBytes(), 0, true);
+    tree.createFile("/foo/bar", "helloworld".getBytes(), true, false);
     Assert.assertEquals(3, tree.size());
     Assert.assertTrue(Arrays.equals("helloworld".getBytes(),
                                     ((FileNode)tree.getNode("/foo/bar")).data));
@@ -91,24 +91,24 @@ public class DataTreeTest extends TestBase {
   @Test(expected=DataTree.NodeAlreadyExist.class)
   public void testDuplicateFile() throws Exception {
     DataTree tree = new DataTree();
-    tree.createFile("/foo", null, 0, false);
-    tree.createFile("/foo", null, 0, false);
+    tree.createFile("/foo", null, false, false);
+    tree.createFile("/foo", null, false, false);
   }
 
   @Test(expected=DataTree.NotDirectory.class)
   public void testCreateUnderFile() throws Exception {
     DataTree tree = new DataTree();
-    tree.createFile("/foo", null, 0, false);
+    tree.createFile("/foo", null, false, false);
     Assert.assertEquals(2, tree.size());
-    tree.createFile("/foo/bar", null, 0, false);
+    tree.createFile("/foo/bar", null, false, false);
   }
 
   @Test
   public void testDeleteFile() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     Assert.assertEquals(4, tree.size());
     tree.deleteNode("/foo/bar1", -1, false);
     Assert.assertEquals(3, tree.size());
@@ -122,8 +122,8 @@ public class DataTreeTest extends TestBase {
   public void testDeleteNonemptyDir() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     tree.deleteNode("/foo", -1, false);
   }
 
@@ -131,8 +131,8 @@ public class DataTreeTest extends TestBase {
   public void testRecursiveDelete() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     tree.deleteNode("/foo", -1, true);
     Assert.assertEquals(1, tree.size());
     Assert.assertEquals(4, tree.getNode("/").version);
@@ -142,8 +142,8 @@ public class DataTreeTest extends TestBase {
   public void testDeleteWithMatchedVersion() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     //Now the /foo/bar1 should have versio 0.
     tree.deleteNode("/foo/bar1", 0, false);
     //Now the /foo/bar2 should have versio 0.
@@ -156,8 +156,8 @@ public class DataTreeTest extends TestBase {
   public void testDeleteWithUnmatchedVersion() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     //Now the /foo/bar1 should have versio 0.
     tree.deleteNode("/foo/bar1", 0, false);
     //Now the /foo/bar2 should have versio 0.
@@ -170,8 +170,8 @@ public class DataTreeTest extends TestBase {
   public void testDeleteWithMatchedVersionRecursive() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     //Now the /foo should have versio 4.
     tree.deleteNode("/foo", 2, true);
     Assert.assertEquals(1, tree.size());
@@ -185,11 +185,11 @@ public class DataTreeTest extends TestBase {
     tree.createDir("/foo", false);
     Assert.assertEquals(1, tree.getNode("/").version);
     Assert.assertEquals(0, tree.getNode("/foo").version);
-    tree.createFile("/foo/bar1", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
     Assert.assertEquals(2, tree.getNode("/").version);
     Assert.assertEquals(1, tree.getNode("/foo").version);
     Assert.assertEquals(0, tree.getNode("/foo/bar1").version);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar2", null, false, false);
     Assert.assertEquals(3, tree.getNode("/").version);
     Assert.assertEquals(2, tree.getNode("/foo").version);
     Assert.assertEquals(0, tree.getNode("/foo/bar1").version);
@@ -212,7 +212,7 @@ public class DataTreeTest extends TestBase {
   public void testSetData() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar", null, 0, false);
+    tree.createFile("/foo/bar", null, false, false);
     Assert.assertEquals(2, tree.getNode("/").version);
     Assert.assertEquals(1, tree.getNode("/foo").version);
     Assert.assertEquals(0, tree.getNode("/foo/bar").version);
@@ -234,7 +234,7 @@ public class DataTreeTest extends TestBase {
   @Test
   public void testSetDataWithMatchedVersion() throws Exception {
     DataTree tree = new DataTree();
-    tree.createFile("/foo", null, 0, false);
+    tree.createFile("/foo", null, false, false);
     Assert.assertEquals(0, tree.getNode("/foo").version);
     tree.setData("/foo", "helloworld1".getBytes(), 0);
     Assert.assertEquals(1, tree.getNode("/foo").version);
@@ -247,7 +247,7 @@ public class DataTreeTest extends TestBase {
   @Test(expected=DataTree.VersionNotMatch.class)
   public void testSetDataWithUnmatchedVersion() throws Exception {
     DataTree tree = new DataTree();
-    tree.createFile("/foo", null, 0, false);
+    tree.createFile("/foo", null, false, false);
     Assert.assertEquals(0, tree.getNode("/foo").version);
     // Sets data with wrong version.
     tree.setData("/foo", "helloworld1".getBytes(), 1);
@@ -264,8 +264,8 @@ public class DataTreeTest extends TestBase {
   public void testChildren() throws Exception {
     DataTree tree = new DataTree();
     tree.createDir("/foo", false);
-    tree.createFile("/foo/bar1", null, 0, false);
-    tree.createFile("/foo/bar2", null, 0, false);
+    tree.createFile("/foo/bar1", null, false, false);
+    tree.createFile("/foo/bar2", null, false, false);
     // /foo has two children bar1 and bar2
     Assert.assertEquals(2, ((DirNode)tree.getNode("/foo")).children.size());
     Assert.assertTrue(((DirNode)tree.getNode("/foo"))
@@ -285,8 +285,9 @@ public class DataTreeTest extends TestBase {
   public void testReturnChanges() throws Exception {
     DataTree tree = new DataTree();
     List<Node> changes = new LinkedList<Node>();
+    Node createdNode = new FileNode("/foo/bar", 0, null);
     tree.root =
-      tree.createNode(tree.root, "foo/bar", null, 0, true, false, changes);
+      tree.createNode(tree.root, createdNode, "foo/bar", true, false, changes);
     Assert.assertEquals(3, changes.size());
     // version of newly created node bar should be 1.
     Assert.assertEquals(0, changes.get(0).version);
@@ -303,5 +304,33 @@ public class DataTreeTest extends TestBase {
     Assert.assertEquals(-1, changes.get(0).version);
     Assert.assertEquals(-1, changes.get(1).version);
     Assert.assertEquals(2, changes.get(2).version);
+  }
+
+  @Test
+  public void testTransientFile() throws Exception {
+    DataTree tree = new DataTree();
+    tree.createFile("/foo/bar/file", null, true, true);
+    Assert.assertEquals(4, tree.size());
+    tree.deleteNode("/foo/bar/file", -1, false);
+    // Since /foo and /foo/bar are transient directories, they get deleted when
+    // /foo/bar/file gets deleted.
+    Assert.assertEquals(1, tree.size());
+    Assert.assertFalse(tree.exist("/foo"));
+
+    tree.createFile("/foo/bar/file1", null, true, true);
+    tree.createFile("/foo/bar/file2", null, true, true);
+    Assert.assertEquals(5, tree.size());
+    tree.deleteNode("/foo/bar/file1", -1, false);
+    // Although /foo and /foo/bar are transient directories, since
+    // /foo/bar/file2 still exists, so they will not be deleted.
+    Assert.assertEquals(4, tree.size());
+    Assert.assertTrue(tree.exist("/foo"));
+    Assert.assertTrue(tree.exist("/foo/bar"));
+    // Now delete the last file file2.
+    tree.deleteNode("/foo/bar/file2", -1, false);
+    // After deleting last file, transient directories get deleted.
+    Assert.assertEquals(1, tree.size());
+    Assert.assertFalse(tree.exist("/foo"));
+    Assert.assertFalse(tree.exist("/foo/bar"));
   }
 }
