@@ -17,7 +17,11 @@
 
 package com.github.zk1931.pulsed;
 
+import com.github.zk1931.jzab.ZabException;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -61,18 +65,67 @@ public final class PulsedSessionsHandler extends HttpServlet {
   protected void doDelete(HttpServletRequest request,
                           HttpServletResponse response)
       throws ServletException, IOException {
+    Utils.replyForbidden(response);
   }
 
   @Override
   protected void doPut(HttpServletRequest request,
                        HttpServletResponse response)
       throws ServletException, IOException {
+    String path = request.getRequestURI();
+    DataTree tree = this.pd.getTree();
+    try {
+      PathUtils.validatePath(path);
+      Node node = tree.getNode(path);
+      long sessionID = Long.parseLong(PathUtils.name(node.fullPath));
+      if (Arrays.equals(((FileNode)node).data,
+                        pd.getServerId().getBytes(Charset.forName("UTF-8")))) {
+        Utils.replyNodeInfo(response, node, false);
+        this.pd.renewSession(sessionID);
+      } else {
+        // This server is not the manager of session, trying to take the
+        // management of the session.
+        LOG.debug("Trying to declare the ownership of session {}", sessionID);
+        AsyncContext context = Utils.getContext(request, response);
+        Command declare = new ManageSessionCommand(sessionID,
+                                                   pd.getServerId());
+        try {
+          this.pd.proposeStateChange(declare, context);
+        } catch (ZabException ex) {
+          Utils.replyServiceUnavailable(response, context);
+        }
+      }
+    } catch (DataTree.InvalidPath ex) {
+      Utils.replyBadRequest(response, ex.getMessage());
+    } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
+      Utils.replyNotFound(response, ex.getMessage());
+    }
   }
 
   @Override
   protected void doPost(HttpServletRequest request,
                         HttpServletResponse response)
       throws ServletException, IOException {
+    String path = request.getPathInfo();
+    String fullPath = request.getRequestURI();
+    if (!path.equals("/")) {
+      // User can only create a session by POST request to /pulsed/sessions
+      Utils.replyForbidden(response);
+      return;
+    }
+    try {
+      PathUtils.validatePath(fullPath);
+      AsyncContext context = Utils.getContext(request, response);
+      // Creates a new session.
+      Command create = new CreateSessionCommand(this.pd.getServerId());
+      try {
+        this.pd.proposeStateChange(create, context);
+      } catch (ZabException ex) {
+        Utils.replyServiceUnavailable(response, context);
+      }
+    } catch (DataTree.InvalidPath ex) {
+      Utils.replyBadRequest(response, ex.getMessage());
+    }
   }
 
   /**

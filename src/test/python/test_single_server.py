@@ -420,3 +420,56 @@ class TestSingleServer(object):
         new_checksum = requests.get(self.baseurl).headers["checksum"]
         # this will not change the checksum of root node.
         assert new_checksum == checksum
+
+    def test_create_session(self):
+        directory = "/pulsed/sessions"
+        res = requests.post(self.baseurl + directory)
+        assert res.status_code == 201
+        assert res.headers["Location"] == directory + "/0000000000000000"
+
+        # try to create file under /pulsed/sessions directory, pulsed will
+        # treat this request as update session so it wil reply 404 since
+        # there's no such session exists.
+        res = requests.put(self.baseurl + directory + "/file")
+        assert res.status_code == 404
+
+    def test_session_expires(self):
+        directory = "/pulsed/sessions"
+        res = requests.post(self.baseurl + directory)
+        assert res.status_code == 201
+        location = res.headers["Location"]
+        assert requests.get(self.baseurl + location).status_code == 200
+        # sleeping for 5 seconds and the session should be expired.
+        time.sleep(5)
+        assert requests.get(self.baseurl + location).status_code == 404
+
+        # creating another session.
+        res = requests.post(self.baseurl + directory)
+        assert res.status_code == 201
+        location = res.headers["Location"]
+        assert requests.get(self.baseurl + location).status_code == 200
+        # trying to wait until session expires.
+        res = requests.get(self.baseurl + location + "/wait=-1")
+        assert res.status_code == 404
+
+    def test_renew_session(self):
+        directory = "/pulsed/sessions"
+        res = requests.post(self.baseurl + directory)
+        assert res.status_code == 201
+        location = res.headers["Location"]
+        assert requests.get(self.baseurl + location).status_code == 200
+        stop = False
+
+        def renew_session():
+            while not stop:
+                requests.put(self.baseurl + location)
+                time.sleep(1)
+
+        thread = threading.Thread(target=renew_session)
+        thread.start()
+
+        # sleeping for 5 seconds and the session should not be expired.
+        time.sleep(5)
+        assert requests.get(self.baseurl + location).status_code == 200
+        stop = True
+        thread.join()

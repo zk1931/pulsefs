@@ -18,13 +18,24 @@
 package com.github.zk1931.pulsed;
 
 /**
- * Pulsed configuration.
+ * Command for expiring a session.
  */
-public final class PulsedConfig {
-  public static final String PULSED_ROOT = "/pulsed";
-  public static final String PULSED_SERVERS_PATH = PULSED_ROOT + "/servers";
-  public static final String PULSED_SESSIONS_PATH = PULSED_ROOT + "/sessions";
-  public static final int SESSION_TIMEOUT = 3;
+public class ExpireSessionCommand extends Command {
 
-  private PulsedConfig() {}
+  private static final long serialVersionUID = 0L;
+
+  final long sessionID;
+
+  public ExpireSessionCommand(long sessionID) {
+    this.sessionID = sessionID;
+  }
+
+  Node execute(Pulsed pulsed) {
+    DataTree tree = pulsed.getTree();
+    tree.deleteSession(sessionID);
+    return null;
+  }
+
+  void executeAndReply(Pulsed pulsed, Object ctx) {
+  }
 }

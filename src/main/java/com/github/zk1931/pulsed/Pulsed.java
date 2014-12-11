@@ -21,6 +21,11 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Callable;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.Set;
 import javax.servlet.AsyncContext;
 import com.github.zk1931.jzab.PendingRequests;
@@ -46,6 +51,28 @@ public final class Pulsed {
   private Set<String> clusterMembers;
   private String leader;
 
+  private ExecutorService fixedPool = Executors.newFixedThreadPool(1);
+  // transient state
+  private DelayQueue<Session> ownedSessions = new DelayQueue<>();
+  private Future<Void> terminatorFuture;
+
+  private class Terminator implements Callable<Void> {
+    private final DelayQueue<Session> sessionQueue;
+
+    public Terminator(DelayQueue<Session> sessionQueue) {
+      this.sessionQueue = sessionQueue;
+    }
+
+    public Void call() throws Exception {
+      while (true) {
+        Session session = this.sessionQueue.take();
+        LOG.debug("Expiring session {}", session.sessionID);
+        Command expire = new ExpireSessionCommand(session.sessionID);
+        proposeStateChange(expire, null);
+      }
+    }
+  }
+
   public Pulsed(String serverId, String joinPeer, String logDir) {
     this.serverId = serverId;
     if (this.serverId != null && joinPeer == null) {
@@ -63,6 +90,7 @@ public final class Pulsed {
       zab = new Zab(stateMachine, config);
     }
     this.serverId = zab.getServerId();
+    terminatorFuture = fixedPool.submit(new Terminator(ownedSessions));
   }
 
   public boolean isLeader() {
@@ -79,6 +107,10 @@ public final class Pulsed {
 
   public String getLeader() {
     return this.leader;
+  }
+
+  public String getServerId() {
+    return this.serverId;
   }
 
   public void removePeer(String peerId, Object ctx) throws ZabException {
@@ -99,6 +131,26 @@ public final class Pulsed {
       throws NotBroadcastingPhase, IOException, TooManyPendingRequests {
     ByteBuffer bb = Serializer.serialize(cmd);
     zab.flush(bb, ctx);
+  }
+
+  public void manageSession(long sessionID) {
+    Session session = new Session(sessionID, PulsedConfig.SESSION_TIMEOUT);
+    LOG.debug("Add session {}", session);
+    this.ownedSessions.remove(session);
+    this.ownedSessions.add(session);
+  }
+
+  public void abandonSession(long sessionID) {
+    Session session = new Session(sessionID, PulsedConfig.SESSION_TIMEOUT);
+    LOG.debug("Abandon session {}", session);
+    this.ownedSessions.remove(session);
+  }
+
+  public void renewSession(long sessionID) {
+    Session session = new Session(sessionID, PulsedConfig.SESSION_TIMEOUT);
+    LOG.debug("Renew session {}", session);
+    this.ownedSessions.remove(session);
+    this.ownedSessions.add(session);
   }
 
   /**
