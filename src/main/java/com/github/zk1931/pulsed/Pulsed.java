@@ -113,6 +113,7 @@ public final class Pulsed {
         // Initialzes special directories /pulsed
         tree.createDir(PulsedConfig.PULSED_ROOT, false);
         tree.createDir(PulsedConfig.PULSED_SERVERS_PATH, false);
+        tree.createDir(PulsedConfig.PULSED_SESSIONS_PATH, false);
       } catch (DataTree.TreeException ex) {
         LOG.error("Exception ", ex);
         throw new RuntimeException(ex);
@@ -129,10 +130,10 @@ public final class Pulsed {
                         Object ctx) {
       Command command = Serializer.deserialize(stateUpdate);
       if (ctx != null) {
-        command.executeAndReply(this.tree, ctx);
+        command.executeAndReply(Pulsed.this, ctx);
       } else {
         try {
-          command.execute(this.tree);
+          command.execute(Pulsed.this);
         } catch (DataTree.TreeException ex) {
           LOG.trace("exception ", ex);
         }
@@ -142,13 +143,13 @@ public final class Pulsed {
     @Override
     public void removed(String peerId, Object ctx) {
       RemoveCommand cmd = (RemoveCommand)ctx;
-      cmd.executeAndReply(this.tree, null);
+      cmd.executeAndReply(Pulsed.this, null);
     }
 
     @Override
     public void flushed(ByteBuffer request, Object ctx) {
       Command command = Serializer.deserialize(request);
-      command.executeAndReply(this.tree, ctx);
+      command.executeAndReply(Pulsed.this, ctx);
     }
 
     @Override

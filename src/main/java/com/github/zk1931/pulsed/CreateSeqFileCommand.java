@@ -46,9 +46,10 @@ public class CreateSeqFileCommand extends Command {
     this.data = data.clone();
   }
 
-  Node execute(DataTree tree)
+  Node execute(Pulsed pulsed)
       throws PathNotExist, InvalidPath, DirectoryNode, NotDirectory,
              NodeAlreadyExist {
+    DataTree tree = pulsed.getTree();
     Node node = tree.getNode(this.dirPath);
     if (!(node instanceof DirNode)) {
       throw new NotDirectory(node.fullPath + " is not directory.");
@@ -58,11 +59,11 @@ public class CreateSeqFileCommand extends Command {
     return tree.createFile(path, this.data, recursive, false);
   }
 
-  void executeAndReply(DataTree tree, Object ctx) {
+  void executeAndReply(Pulsed pulsed, Object ctx) {
     AsyncContext context = (AsyncContext)ctx;
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
-      Node node = execute(tree);
+      Node node = execute(pulsed);
       // Since user has not idea of the path of newly craeted sequential node,
       // we need return it to user.
       response.addHeader("Location", node.fullPath);

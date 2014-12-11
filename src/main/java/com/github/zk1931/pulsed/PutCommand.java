@@ -53,10 +53,10 @@ public class PutCommand extends Command {
     this.isTransient = isTransient;
   }
 
-  Node execute(DataTree tree)
+  Node execute(Pulsed pulsed)
       throws PathNotExist, InvalidPath, VersionNotMatch, DirectoryNode,
              NotDirectory, NodeAlreadyExist {
-
+    DataTree tree = pulsed.getTree();
     if (version < -1) {
       // If version is less than -1 then we do creation or set depends on if the
       // path exists in the tree or not.
@@ -75,11 +75,11 @@ public class PutCommand extends Command {
     }
   }
 
-  void executeAndReply(DataTree tree, Object ctx) {
+  void executeAndReply(Pulsed pulsed, Object ctx) {
     AsyncContext context = (AsyncContext)ctx;
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
-      Node node = execute(tree);
+      Node node = execute(pulsed);
       Utils.setHeader(node, response);
       if (node.version == 0) {
         Utils.replyCreated(response, context);

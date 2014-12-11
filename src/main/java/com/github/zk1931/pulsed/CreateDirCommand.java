@@ -43,16 +43,17 @@ public class CreateDirCommand extends Command {
     this.recursive = recursive;
   }
 
-  Node execute(DataTree tree)
+  Node execute(Pulsed pulsed)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+    DataTree tree = pulsed.getTree();
     return tree.createDir(this.path, this.recursive);
   }
 
-  void executeAndReply(DataTree tree, Object ctx) {
+  void executeAndReply(Pulsed pulsed, Object ctx) {
     AsyncContext context = (AsyncContext)ctx;
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
-      Node node = execute(tree);
+      Node node = execute(pulsed);
       Utils.setHeader(node, response);
       Utils.replyCreated(response, context);
     } catch (PathNotExist ex) {

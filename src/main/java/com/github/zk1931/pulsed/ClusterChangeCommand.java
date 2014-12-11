@@ -40,7 +40,8 @@ public class ClusterChangeCommand extends Command {
     this.leader = leader;
   }
 
-  Node execute(DataTree tree) throws DataTree.TreeException {
+  Node execute(Pulsed pulsed) throws DataTree.TreeException {
+    DataTree tree = pulsed.getTree();
     // Gets node /pulsed/servers
     Node serversNode = tree.getNode(PulsedConfig.PULSED_SERVERS_PATH);
     DirNode rootNode = tree.root;
@@ -64,6 +65,6 @@ public class ClusterChangeCommand extends Command {
     return null;
   }
 
-  void executeAndReply(DataTree tree, Object ctx) {
+  void executeAndReply(Pulsed pulsed, Object ctx) {
   }
 }

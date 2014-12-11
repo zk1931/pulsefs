@@ -26,18 +26,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Handler for processing the requests for Pulsed server configuration.
+ * Handler for session request.
  */
-public final class PulsedHandler extends HttpServlet {
+public final class PulsedSessionsHandler extends HttpServlet {
 
   private static final long serialVersionUID = 0L;
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(PulsedHandler.class);
+      LoggerFactory.getLogger(PulsedSessionsHandler.class);
 
   private final Pulsed pd;
 
-  PulsedHandler(Pulsed pd) {
+  PulsedSessionsHandler(Pulsed pd) {
     this.pd = pd;
   }
 
@@ -58,12 +58,21 @@ public final class PulsedHandler extends HttpServlet {
   }
 
   @Override
-  protected void doPut(HttpServletRequest request, HttpServletResponse response)
+  protected void doDelete(HttpServletRequest request,
+                          HttpServletResponse response)
       throws ServletException, IOException {
-    LOG.info("Put");
-    response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    response.setContentLength(0);
+  }
+
+  @Override
+  protected void doPut(HttpServletRequest request,
+                       HttpServletResponse response)
+      throws ServletException, IOException {
+  }
+
+  @Override
+  protected void doPost(HttpServletRequest request,
+                        HttpServletResponse response)
+      throws ServletException, IOException {
   }
 
   /**

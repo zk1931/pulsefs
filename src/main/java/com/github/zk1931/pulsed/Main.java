@@ -132,8 +132,15 @@ public final class Main {
     tree.setContextPath("/");
     tree.addServlet(new ServletHolder(new TreeHandler(pd)), "/*");
 
+    ServletContextHandler sessions =
+        new ServletContextHandler(ServletContextHandler.SESSIONS);
+    sessions.setContextPath(PulsedConfig.PULSED_SESSIONS_PATH);
+    // Redirects /pulsed/sessions to /pulsed/sessions/
+    sessions.setAllowNullPathInfo(true);
+    sessions.addServlet(new ServletHolder(new PulsedSessionsHandler(pd)), "/*");
+
     ContextHandlerCollection contexts = new ContextHandlerCollection();
-    contexts.setHandlers(new Handler[] {servers, pulsed, tree});
+    contexts.setHandlers(new Handler[] {sessions, servers, pulsed, tree});
     server.setHandler(contexts);
     server.start();
     server.join();

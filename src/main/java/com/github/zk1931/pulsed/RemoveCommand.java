@@ -33,11 +33,11 @@ public class RemoveCommand extends Command {
     this.context = context;
   }
 
-  Node execute(DataTree tree) {
+  Node execute(Pulsed pulsed) {
     return null;
   }
 
-  void executeAndReply(DataTree tree, Object ctx) {
+  void executeAndReply(Pulsed pulsed, Object ctx) {
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     response.setStatus(HttpServletResponse.SC_OK);
     context.complete();
