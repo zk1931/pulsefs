@@ -35,6 +35,28 @@ special version is used for file/directory creation as well as watching for file
 
 A special directory `/pulsed` is reserved for use by pulsed.
 
+retriving cluster info
+----------------------
+
+    GET /pulsed/servers/ HTTP/1.1
+    content-length: 0
+
+    HTTP/1.1 200 OK
+    {
+      "active_members":["localhost:50001","localhost:5000"],
+      "leader":"localhost:5000",
+      "cluster_members":["localhost:50001","localhost:5000"]
+    }
+
+removing server from cluster
+----------------------------
+
+    DELETE /pulsed/servers/localhost:5000 HTTP/1.1
+    content-length: 0
+
+    HTTP/1.1 200 OK
+    content-length: 0
+
 creating a new regular file
 ---------------------------
 
