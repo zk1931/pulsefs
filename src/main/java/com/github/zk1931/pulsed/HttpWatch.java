@@ -30,6 +30,7 @@ public class HttpWatch implements Watch {
   final boolean recursive;
   final AsyncContext ctx;
   final String path;
+  boolean isTriggered = false;
 
   HttpWatch(long version, boolean recursive, String path, AsyncContext ctx) {
     this.version = version;
@@ -43,6 +44,9 @@ public class HttpWatch implements Watch {
     if (!isTriggerable(node)) {
       throw new RuntimeException("Not triggerable by " + node.version);
     }
+    if (this.isTriggered) {
+      return;
+    }
     HttpServletResponse response = (HttpServletResponse)(ctx.getResponse());
     if (node.version == -1) {
       // Node just gets deleted, reply NOT_FOUND.
@@ -54,6 +58,7 @@ public class HttpWatch implements Watch {
         Utils.replyBadRequest(response, ex.getMessage(), ctx);
       }
     }
+    this.isTriggered = true;
   }
 
   @Override

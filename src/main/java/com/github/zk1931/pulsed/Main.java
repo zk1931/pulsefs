@@ -116,12 +116,15 @@ public final class Main {
 
     ServletContextHandler pulsed =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
-    pulsed.setContextPath("/pulsed");
+    pulsed.setContextPath(PulsedConfig.PULSED_ROOT);
+    pulsed.setAllowNullPathInfo(true);
     pulsed.addServlet(new ServletHolder(new PulsedHandler(pd)), "/*");
 
     ServletContextHandler servers =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
-    servers.setContextPath("/pulsed/servers");
+    servers.setContextPath(PulsedConfig.PULSED_SERVERS_PATH);
+    // Redirects /pulsed/servers to /pulsed/servers/
+    servers.setAllowNullPathInfo(true);
     servers.addServlet(new ServletHolder(new PulsedServersHandler(pd)), "/*");
 
     ServletContextHandler tree =
