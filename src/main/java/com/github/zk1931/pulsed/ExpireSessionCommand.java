@@ -17,39 +17,25 @@
 
 package com.github.zk1931.pulsed;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.http.HttpServletResponse;
-
 /**
- * Remove Command. Although this class inherits from Command, but it's not
- * serializable.
+ * Command for expiring a session.
  */
-public class RemoveCommand extends Command {
+public class ExpireSessionCommand extends Command {
 
   private static final long serialVersionUID = 0L;
-  AsyncContext context;
 
-  RemoveCommand(AsyncContext context) {
-    this.context = context;
+  final long sessionID;
+
+  public ExpireSessionCommand(long sessionID) {
+    this.sessionID = sessionID;
   }
 
   Node execute(Pulsed pulsed) {
+    DataTree tree = pulsed.getTree();
+    tree.deleteSession(sessionID);
     return null;
   }
 
   void executeAndReply(Pulsed pulsed, Object ctx) {
-    HttpServletResponse response = (HttpServletResponse)(context.getResponse());
-    response.setStatus(HttpServletResponse.SC_OK);
-    context.complete();
-  }
-
-  private void writeObject(java.io.ObjectOutputStream stream)
-      throws java.io.IOException {
-    throw new java.io.NotSerializableException(getClass().getName());
-  }
-
-  private void readObject(java.io.ObjectInputStream stream)
-      throws java.io.IOException, ClassNotFoundException {
-    throw new java.io.NotSerializableException(getClass().getName());
   }
 }

@@ -17,36 +17,51 @@
 
 package com.github.zk1931.pulsed;
 
+import com.github.zk1931.pulsed.DataTree.DirectoryNode;
 import com.github.zk1931.pulsed.DataTree.InvalidPath;
 import com.github.zk1931.pulsed.DataTree.NodeAlreadyExist;
 import com.github.zk1931.pulsed.DataTree.NotDirectory;
 import com.github.zk1931.pulsed.DataTree.PathNotExist;
 import com.github.zk1931.pulsed.DataTree.TreeException;
+import java.nio.charset.Charset;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.AsyncContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Command for creating directory.
+ * Command for creating a new session.
  */
-public class CreateDirCommand extends Command {
+public class CreateSessionCommand extends Command {
 
   private static final long serialVersionUID = 0L;
-  private static final Logger LOG = LoggerFactory.getLogger(PutCommand.class);
+  final String manager;
 
-  final String path;
-  final boolean recursive;
-
-  public CreateDirCommand(String path, boolean recursive) {
-    this.path = path;
-    this.recursive = recursive;
+  public CreateSessionCommand(String manager) {
+    this.manager = manager;
   }
 
   Node execute(Pulsed pulsed)
-      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+      throws PathNotExist, InvalidPath, DirectoryNode, NotDirectory,
+             NodeAlreadyExist {
     DataTree tree = pulsed.getTree();
-    return tree.createDir(this.path, this.recursive);
+    String dirPath = PulsedConfig.PULSED_SESSIONS_PATH;
+    DirNode sessionNode = (DirNode)tree.getNode(dirPath);
+    // Use the version of /pulsed/sessions directory as session ID.
+    long sessionID = sessionNode.version;
+    String fileName = String.format("%016d", sessionID);
+    String path = PathUtils.concat(dirPath, fileName);
+    // Itself it's also a session file.
+    Node node =
+      tree.createSessionFile(path,
+                             manager.getBytes(Charset.forName("UTF-8")),
+                             sessionID,
+                             false,
+                             false);
+    if (manager.equals(pulsed.getServerId())) {
+      pulsed.manageSession(sessionID);
+    } else {
+      pulsed.abandonSession(sessionID);
+    }
+    return node;
   }
 
   void executeAndReply(Pulsed pulsed, Object ctx) {
@@ -54,11 +69,14 @@ public class CreateDirCommand extends Command {
     HttpServletResponse response = (HttpServletResponse)(context.getResponse());
     try {
       Node node = execute(pulsed);
+      // Since user has not idea of the path of newly craeted sequential node,
+      // we need return it to user.
+      response.addHeader("Location", node.fullPath);
       Utils.setHeader(node, response);
       Utils.replyCreated(response, context);
     } catch (PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
-    }catch (TreeException ex) {
+    } catch (TreeException ex) {
       Utils.replyBadRequest(response, ex.getMessage(), context);
     }
   }

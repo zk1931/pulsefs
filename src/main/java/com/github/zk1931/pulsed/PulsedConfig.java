@@ -24,6 +24,7 @@ public final class PulsedConfig {
   public static final String PULSED_ROOT = "/pulsed";
   public static final String PULSED_SERVERS_PATH = PULSED_ROOT + "/servers";
   public static final String PULSED_SESSIONS_PATH = PULSED_ROOT + "/sessions";
+  public static final int SESSION_TIMEOUT = 3;
 
   private PulsedConfig() {}
 }

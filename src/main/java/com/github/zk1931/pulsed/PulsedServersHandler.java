@@ -19,7 +19,6 @@ package com.github.zk1931.pulsed;
 
 import java.io.IOException;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -28,17 +27,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Handler for processing the requests for Pulsed server configuration.
  */
-public final class PulsedServersHandler extends HttpServlet {
+public class PulsedServersHandler extends PulsedHandler {
 
   private static final long serialVersionUID = 0L;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(PulsedServersHandler.class);
 
-  private final Pulsed pd;
-
   PulsedServersHandler(Pulsed pd) {
-    this.pd = pd;
+    super(pd);
   }
 
   @Override
@@ -55,19 +52,6 @@ public final class PulsedServersHandler extends HttpServlet {
     } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
       Utils.replyNotFound(response, ex.getMessage());
     }
-  }
-
-  @Override
-  protected void doDelete(HttpServletRequest request,
-                          HttpServletResponse response)
-      throws ServletException, IOException {
-    Utils.replyForbidden(response);
-  }
-
-  @Override
-  protected void doPut(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    Utils.replyForbidden(response);
   }
 
   /**

@@ -17,36 +17,38 @@
 
 package com.github.zk1931.pulsed;
 
-import com.github.zk1931.pulsed.DataTree.InvalidPath;
-import com.github.zk1931.pulsed.DataTree.NodeAlreadyExist;
-import com.github.zk1931.pulsed.DataTree.NotDirectory;
-import com.github.zk1931.pulsed.DataTree.PathNotExist;
-import com.github.zk1931.pulsed.DataTree.TreeException;
+import java.nio.charset.Charset;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.AsyncContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Command for creating directory.
+ * Command for taking the management(ownership) of a session.
  */
-public class CreateDirCommand extends Command {
+public class ManageSessionCommand extends Command {
 
   private static final long serialVersionUID = 0L;
-  private static final Logger LOG = LoggerFactory.getLogger(PutCommand.class);
 
-  final String path;
-  final boolean recursive;
+  final long sessionID;
+  final String newOwner;
 
-  public CreateDirCommand(String path, boolean recursive) {
-    this.path = path;
-    this.recursive = recursive;
+  public ManageSessionCommand(long sessionID, String newOwner) {
+    this.sessionID = sessionID;
+    this.newOwner = newOwner;
   }
 
-  Node execute(Pulsed pulsed)
-      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+  Node execute(Pulsed pulsed) throws DataTree.TreeException {
     DataTree tree = pulsed.getTree();
-    return tree.createDir(this.path, this.recursive);
+    String dirPath = PulsedConfig.PULSED_SESSIONS_PATH;
+    String file = String.format("%016d", sessionID);
+    String path = dirPath + PathUtils.SEP + file;
+    Node node =
+      tree.setData(path, newOwner.getBytes(Charset.forName("UTF-8")), -1);
+    if (pulsed.getServerId().equals(newOwner)) {
+      pulsed.manageSession(sessionID);
+    } else {
+      pulsed.abandonSession(sessionID);
+    }
+    return node;
   }
 
   void executeAndReply(Pulsed pulsed, Object ctx) {
@@ -55,10 +57,10 @@ public class CreateDirCommand extends Command {
     try {
       Node node = execute(pulsed);
       Utils.setHeader(node, response);
-      Utils.replyCreated(response, context);
-    } catch (PathNotExist ex) {
+      Utils.replyOK(response, context);
+    } catch (DataTree.PathNotExist ex) {
       Utils.replyNotFound(response, ex.getMessage(), context);
-    }catch (TreeException ex) {
+    } catch (DataTree.TreeException ex) {
       Utils.replyBadRequest(response, ex.getMessage(), context);
     }
   }

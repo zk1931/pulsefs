@@ -333,4 +333,47 @@ public class DataTreeTest extends TestBase {
     Assert.assertFalse(tree.exist("/foo"));
     Assert.assertFalse(tree.exist("/foo/bar"));
   }
+
+  @Test
+  public void testSessionFile() throws Exception {
+    DataTree tree = new DataTree();
+    tree.createDir("/session1", false);
+    tree.createSessionFile("/session1/file1", null, 1, false, false);
+    tree.createSessionFile("/session1/file2", null, 1, false, false);
+    tree.createDir("/session2", false);
+    tree.createSessionFile("/session2/file1", null, 2, false, false);
+    tree.createSessionFile("/session2/file2", null, 2, false, false);
+    tree.createSessionFile("/session2/file3", null, 2, false, false);
+    // Now we have 8 nodes in total.
+    Assert.assertEquals(8, tree.size());
+    // Deletes one file of session2.
+    tree.deleteNode("/session2/file2", -1, false);
+    // Now we have 7 nodes in total.
+    Assert.assertEquals(7, tree.size());
+    // Deletes all the files of session 1.
+    tree.deleteSession(1);
+    // Now we have 5 nodes in total.
+    Assert.assertEquals(5, tree.size());
+    Assert.assertFalse(tree.exist("/session1/file1"));
+    Assert.assertFalse(tree.exist("/session1/file2"));
+    // Deletes all the files of session 2.
+    tree.deleteSession(2);
+    // Now we have 3 nodes in total.
+    Assert.assertEquals(3, tree.size());
+    Assert.assertFalse(tree.exist("/session2/file1"));
+    Assert.assertFalse(tree.exist("/session2/file2"));
+
+    // Deletes all the files of session 3, which doesn't exist.
+    tree.deleteSession(3);
+    // Now we have 3 nodes in total.
+    Assert.assertEquals(3, tree.size());
+    Assert.assertFalse(tree.exist("/session2/file1"));
+
+    // Creates files with session 1 again.
+    tree.createSessionFile("/session1/file1", null, 1, false, false);
+    tree.createSessionFile("/session1/file2", null, 1, false, false);
+    Assert.assertEquals(5, tree.size());
+    Assert.assertTrue(tree.exist("/session1/file1"));
+    Assert.assertTrue(tree.exist("/session1/file2"));
+  }
 }
