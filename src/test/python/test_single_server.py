@@ -384,3 +384,39 @@ class TestSingleServer(object):
         # can't delete file under /pulsed/servers
         assert res.status_code == 403
         assert res.reason == "Forbidden"
+
+    def test_checksum(self):
+        # test checksum will be changed after changes on the tree.
+        directory = "/" + str(uuid.uuid4())
+
+        res = requests.get(self.baseurl)
+        assert res.status_code == 200
+        checksum = res.headers["checksum"]
+
+        # creating a directory
+        res = requests.put(self.baseurl + directory + "?dir")
+        assert res.status_code == 201
+        new_checksum = requests.get(self.baseurl).headers["checksum"]
+        assert new_checksum != checksum
+        checksum = new_checksum
+
+        # creating a file
+        res = requests.put(self.baseurl + directory + "/file1")
+        assert res.status_code == 201
+        new_checksum = requests.get(self.baseurl).headers["checksum"]
+        assert new_checksum != checksum
+        checksum = new_checksum
+
+        # deleting a file
+        res = requests.delete(self.baseurl + directory + "/file1")
+        assert res.status_code == 200
+        new_checksum = requests.get(self.baseurl).headers["checksum"]
+        assert new_checksum != checksum
+        checksum = new_checksum
+
+        # just getting the directory info.
+        res = requests.get(self.baseurl + directory)
+        assert res.status_code == 200
+        new_checksum = requests.get(self.baseurl).headers["checksum"]
+        # this will not change the checksum of root node.
+        assert new_checksum == checksum
