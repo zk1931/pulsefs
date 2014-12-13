@@ -23,7 +23,6 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -32,40 +31,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Handler for session request.
  */
-public final class PulsedSessionsHandler extends HttpServlet {
+public class PulsedSessionsHandler extends PulsedHandler {
 
   private static final long serialVersionUID = 0L;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(PulsedSessionsHandler.class);
 
-  private final Pulsed pd;
-
   PulsedSessionsHandler(Pulsed pd) {
-    this.pd = pd;
-  }
-
-  @Override
-  protected void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    String path = request.getRequestURI();
-    DataTree tree = this.pd.getTree();
-    try {
-      PathUtils.validatePath(path);
-      Node node = tree.getNode(path);
-      Utils.replyNodeInfo(response, node, false);
-    } catch (DataTree.InvalidPath ex) {
-      Utils.replyBadRequest(response, ex.getMessage());
-    } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
-      Utils.replyNotFound(response, ex.getMessage());
-    }
-  }
-
-  @Override
-  protected void doDelete(HttpServletRequest request,
-                          HttpServletResponse response)
-      throws ServletException, IOException {
-    Utils.replyForbidden(response);
+    super(pd);
   }
 
   @Override

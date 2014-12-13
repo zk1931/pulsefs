@@ -17,6 +17,8 @@
 
 package com.github.zk1931.pulsed;
 
+import java.util.EnumSet;
+import javax.servlet.DispatcherType;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -30,6 +32,7 @@ import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
@@ -110,15 +113,20 @@ public final class Main {
         }
       }
     }
+
     Pulsed pd = new Pulsed(cmd.getOptionValue("addr"),
                            cmd.getOptionValue("join"),
                            cmd.getOptionValue("dir"));
+
+    SessionFilter sessionFilter = new SessionFilter(pd);
+    FilterHolder filters = new FilterHolder(sessionFilter);
 
     ServletContextHandler pulsed =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
     pulsed.setContextPath(PulsedConfig.PULSED_ROOT);
     pulsed.setAllowNullPathInfo(true);
     pulsed.addServlet(new ServletHolder(new PulsedHandler(pd)), "/*");
+    pulsed.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
 
     ServletContextHandler servers =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -126,11 +134,13 @@ public final class Main {
     // Redirects /pulsed/servers to /pulsed/servers/
     servers.setAllowNullPathInfo(true);
     servers.addServlet(new ServletHolder(new PulsedServersHandler(pd)), "/*");
+    servers.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
 
     ServletContextHandler tree =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
     tree.setContextPath("/");
     tree.addServlet(new ServletHolder(new TreeHandler(pd)), "/*");
+    tree.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
 
     ServletContextHandler sessions =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -138,6 +148,7 @@ public final class Main {
     // Redirects /pulsed/sessions to /pulsed/sessions/
     sessions.setAllowNullPathInfo(true);
     sessions.addServlet(new ServletHolder(new PulsedSessionsHandler(pd)), "/*");
+    sessions.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     contexts.setHandlers(new Handler[] {sessions, servers, pulsed, tree});

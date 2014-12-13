@@ -449,8 +449,14 @@ class TestSingleServer(object):
         location = res.headers["Location"]
         assert requests.get(self.baseurl + location).status_code == 200
         # trying to wait until session expires.
-        res = requests.get(self.baseurl + location + "/wait=-1")
+        res = requests.get(self.baseurl + location + "?wait=-1")
         assert res.status_code == 404
+
+        session = location[location.rfind("/") + 1:]
+        # getting root node with expired session id.
+        res = requests.get(self.baseurl + "/?session=" + session)
+        # session expired.
+        assert res.status_code == 412
 
     def test_renew_session(self):
         directory = "/pulsed/sessions"
@@ -471,5 +477,12 @@ class TestSingleServer(object):
         # sleeping for 5 seconds and the session should not be expired.
         time.sleep(5)
         assert requests.get(self.baseurl + location).status_code == 200
+
+        session = location[location.rfind("/") + 1:]
+        # getting root node with unexpired session id.
+        res = requests.get(self.baseurl + "/?session=" + session)
+        # succeed.
+        assert res.status_code == 200
+
         stop = True
         thread.join()

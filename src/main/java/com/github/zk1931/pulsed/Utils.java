@@ -158,6 +158,33 @@ public final class Utils {
     }
   }
 
+  public static void replyTimeout(HttpServletResponse response, String desc) {
+    replyTimeout(response, desc, null);
+  }
+
+  public static void replyTimeout(HttpServletResponse response,
+                                  String desc,
+                                  AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_REQUEST_TIMEOUT, desc);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
+  public static void replyPrecondFailed(HttpServletResponse response,
+                                        String desc) {
+    replyPrecondFailed(response, desc, null);
+  }
+
+  public static void replyPrecondFailed(HttpServletResponse response,
+                                        String desc,
+                                        AsyncContext ctx) {
+    response.setStatus(HttpServletResponse.SC_PRECONDITION_FAILED, desc);
+    if (ctx != null) {
+      ctx.complete();
+    }
+  }
+
   public static void replyNodeInfo(HttpServletResponse response,
                                    Node node,
                                    boolean recursive) throws IOException {

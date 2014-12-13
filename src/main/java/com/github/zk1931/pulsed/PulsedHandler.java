@@ -19,7 +19,6 @@ package com.github.zk1931.pulsed;
 
 import java.io.IOException;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -28,42 +27,36 @@ import org.slf4j.LoggerFactory;
 /**
  * Handler for processing the requests for Pulsed server configuration.
  */
-public final class PulsedHandler extends HttpServlet {
+public class PulsedHandler extends TreeHandler {
 
   private static final long serialVersionUID = 0L;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(PulsedHandler.class);
 
-  private final Pulsed pd;
 
   PulsedHandler(Pulsed pd) {
-    this.pd = pd;
+    super(pd);
   }
 
   @Override
-  protected void doGet(HttpServletRequest request, HttpServletResponse response)
+  protected void doDelete(HttpServletRequest request,
+                          HttpServletResponse response)
       throws ServletException, IOException {
-    String path = request.getRequestURI();
-    DataTree tree = this.pd.getTree();
-    try {
-      PathUtils.validatePath(path);
-      Node node = tree.getNode(path);
-      Utils.replyNodeInfo(response, node, false);
-    } catch (DataTree.InvalidPath ex) {
-      Utils.replyBadRequest(response, ex.getMessage());
-    } catch (DataTree.PathNotExist | DataTree.NotDirectory ex) {
-      Utils.replyNotFound(response, ex.getMessage());
-    }
+    Utils.replyForbidden(response);
   }
 
   @Override
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    LOG.info("Put");
-    response.setContentType("text/html");
-    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    response.setContentLength(0);
+    Utils.replyForbidden(response);
+  }
+
+  @Override
+  protected void doPost(HttpServletRequest request,
+                        HttpServletResponse response)
+      throws ServletException, IOException {
+    Utils.replyForbidden(response);
   }
 
   /**

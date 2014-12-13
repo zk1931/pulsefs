@@ -30,14 +30,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Handler for processing the requests for the tree structure.
  */
-public final class  TreeHandler extends HttpServlet {
+public class  TreeHandler extends HttpServlet {
 
   private static final long serialVersionUID = 0L;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TreeHandler.class);
 
-  private final Pulsed pd;
+  protected final Pulsed pd;
 
   TreeHandler(Pulsed pd) {
     this.pd = pd;
