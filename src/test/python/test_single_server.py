@@ -143,7 +143,8 @@ class TestSingleServer(object):
         assert results[0].headers["version"] == "0"
         assert results[0].headers["type"] == "dir"
         assert all(r.status_code == results[0].status_code for r in results)
-        assert all(r.headers == results[0].headers for r in results)
+        assert all(r.headers["checksum"] ==
+                   results[0].headers["checksum"] for r in results)
         assert all(r.content == results[0].content for r in results)
 
     def test_wait_file(self):
