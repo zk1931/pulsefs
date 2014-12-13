@@ -60,7 +60,7 @@ public class PulsedSessionsHandler extends PulsedHandler {
         // This server is not the manager of session, trying to take the
         // management of the session.
         LOG.debug("Trying to declare the ownership of session {}", sessionID);
-        AsyncContext context = Utils.getContext(request, response);
+        AsyncContext context = getContext(request, response);
         Command declare = new ManageSessionCommand(sessionID,
                                                    pd.getServerId());
         try {
@@ -89,7 +89,7 @@ public class PulsedSessionsHandler extends PulsedHandler {
     }
     try {
       PathUtils.validatePath(fullPath);
-      AsyncContext context = Utils.getContext(request, response);
+      AsyncContext context = getContext(request, response);
       // Creates a new session.
       Command create = new CreateSessionCommand(this.pd.getServerId());
       try {

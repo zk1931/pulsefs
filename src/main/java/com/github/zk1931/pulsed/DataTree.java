@@ -55,6 +55,15 @@ public class DataTree {
   }
 
   /**
+   * Returns the version of the root node.
+   *
+   * @return the version of root node.
+   */
+  public long rootVersion() {
+    return this.root.version;
+  }
+
+  /**
    * Checks if there a node in given path.
    *
    * @param path the path of node.

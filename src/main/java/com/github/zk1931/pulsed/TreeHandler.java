@@ -20,7 +20,10 @@ package com.github.zk1931.pulsed;
 import com.github.zk1931.jzab.ZabException;
 import java.io.IOException;
 import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
 import javax.servlet.ServletException;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -69,7 +72,7 @@ public class  TreeHandler extends HttpServlet {
         // of serving it directly we need to flush it through Zab so all the
         // watch/Put requests will be processed within single thread.
         //long version = Long.parseLong(options.get("wait"));
-        AsyncContext context = Utils.getContext(request, response);
+        AsyncContext context = getContext(request, response);
         processWatchRequest(context, tree, path, version, recursive);
       } else {
         // If it's not watch request, serves it directly.
@@ -87,7 +90,7 @@ public class  TreeHandler extends HttpServlet {
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getRequestURI();
-    AsyncContext context = Utils.getContext(request, response);
+    AsyncContext context = getContext(request, response);
     // Since the version -1 means creation, we use -2 as default(does
     // creation/set depends the existence of the path).
     long version = -2;
@@ -126,7 +129,7 @@ public class  TreeHandler extends HttpServlet {
                           HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getRequestURI();
-    AsyncContext context = Utils.getContext(request, response);
+    AsyncContext context = getContext(request, response);
     boolean recursive;
     long version = -1;
     try {
@@ -152,7 +155,7 @@ public class  TreeHandler extends HttpServlet {
                         HttpServletResponse response)
       throws ServletException, IOException {
     String path = request.getRequestURI();
-    AsyncContext context = Utils.getContext(request, response);
+    AsyncContext context = getContext(request, response);
     byte[] data = Utils.readData(request);
     boolean recursive = request.getParameter("recursive") != null;
     try {
@@ -162,6 +165,16 @@ public class  TreeHandler extends HttpServlet {
       Utils.replyServiceUnavailable(response, context);
     }
   }
+
+  @Override
+  protected void service(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
+    super.service(req, resp);
+    if (!req.isAsyncStarted()) {
+      resp.addHeader("root-version", Long.toString(pd.getTree().rootVersion()));
+    }
+  }
+
 
   void processWatchRequest(AsyncContext ctx,
                            DataTree tree,
@@ -198,6 +211,31 @@ public class  TreeHandler extends HttpServlet {
         Utils.replyBadRequest(response, ex.getMessage(), ctx);
       }
     }
+  }
+
+  protected AsyncContext getContext(HttpServletRequest request,
+                                    HttpServletResponse response) {
+    // This listener is responsible for adding global version number to
+    // asynchronous request.
+    AsyncListener listener = new AsyncListener() {
+      @Override
+      public void onComplete(AsyncEvent event) {
+        String rootVersion = Long.toString(pd.getTree().rootVersion());
+        ServletResponse resp = event.getSuppliedResponse();
+        ((HttpServletResponse)resp).addHeader("root-version", rootVersion);
+      }
+      @Override
+      public void onError(AsyncEvent event) {}
+      @Override
+      public void onStartAsync(AsyncEvent event) {}
+      @Override
+      public void onTimeout(AsyncEvent event) {}
+    };
+    AsyncContext context = request.startAsync(request, response);
+    context.addListener(listener);
+    // No timeout.
+    context.setTimeout(0);
+    return context;
   }
 
   /**

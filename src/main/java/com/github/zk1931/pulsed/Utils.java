@@ -37,14 +37,6 @@ public final class Utils {
 
   private Utils() {}
 
-  public static AsyncContext getContext(HttpServletRequest request,
-                                        HttpServletResponse response) {
-    AsyncContext context = request.startAsync(request, response);
-    // No timeout.
-    context.setTimeout(0);
-    return context;
-  }
-
   public static byte[] readData(HttpServletRequest request) throws IOException {
     int length = request.getContentLength();
     byte[] data;
