@@ -1,7 +1,22 @@
 pulsed [![Build Status](https://travis-ci.org/zk1931/pulsed.svg?branch=master)](https://travis-ci.org/zk1931/pulsed)
 =====
 
-A reference implementation for using [jzab](https://github.com/zk1931/jzab)
+`pulsed` is an HTTP-based replicated filestore for distributed coordination.
+Its features include:
+
+- **Sequentially consistent** All the replicas see updates in the same order.
+- **Ephemeral files and transient directories** for implementing distributed
+  coordination primitives such as locks and barriers.
+- **Sequential files** for ordering writes.
+- **Dynamic cluster reconfiguration** Add/remove servers without restarting the
+  cluster.
+- **Atomic updates** Atomically execute multiple operations.
+
+Getting Started
+---------------
+
+- [API specifications](https://github.com/zk1931/pulsed/blob/master/SPEC.md)
+  describes the API in details.
 
 Compilation
 -----------
