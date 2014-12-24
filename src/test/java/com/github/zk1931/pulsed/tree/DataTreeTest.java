@@ -19,6 +19,9 @@
 package com.github.zk1931.pulsed.tree;
 
 import com.github.zk1931.pulsed.TestBase;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -376,5 +379,46 @@ public class DataTreeTest extends TestBase {
     Assert.assertEquals(5, tree.size());
     Assert.assertTrue(tree.exist("/session1/file1"));
     Assert.assertTrue(tree.exist("/session1/file2"));
+  }
+
+  @Test
+  public void testSerialize() throws Exception {
+    DataTree tree = new DataTree();
+    tree.createDir("/session1", false);
+    tree.createSessionFile("/session1/file1", null, 1, false, false);
+    tree.createSessionFile("/session1/file2", null, 1, false, false);
+    tree.createDir("/session2", false);
+    tree.createSessionFile("/session2/file1", null, 2, false, false);
+    tree.createSessionFile("/session2/file2", null, 2, false, false);
+    tree.createSessionFile("/session2/file3", null, 2, false, false);
+
+    Assert.assertEquals(8, tree.size());
+    Assert.assertTrue(tree.exist("/session1"));
+    Assert.assertTrue(tree.exist("/session1/file1"));
+    Assert.assertTrue(tree.exist("/session1/file2"));
+    Assert.assertTrue(tree.exist("/session2"));
+    Assert.assertTrue(tree.exist("/session2/file1"));
+    Assert.assertTrue(tree.exist("/session2/file2"));
+
+    FileOutputStream fout =
+      new FileOutputStream(new File(getDirectory(), "test"));
+    tree.serializeTo(fout);
+    fout.close();
+
+    tree = new DataTree();
+    // Verifies it's an empty tree (just root node).
+    Assert.assertEquals(1, tree.size());
+
+    FileInputStream fin = new FileInputStream(new File(getDirectory(), "test"));
+    tree.deserializeFrom(fin);
+
+    // Verifies it's restored to same state.
+    Assert.assertEquals(8, tree.size());
+    Assert.assertTrue(tree.exist("/session1"));
+    Assert.assertTrue(tree.exist("/session1/file1"));
+    Assert.assertTrue(tree.exist("/session1/file2"));
+    Assert.assertTrue(tree.exist("/session2"));
+    Assert.assertTrue(tree.exist("/session2/file1"));
+    Assert.assertTrue(tree.exist("/session2/file2"));
   }
 }

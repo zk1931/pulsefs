@@ -207,12 +207,20 @@ public final class Pulsed {
 
     @Override
     public void save(OutputStream os) {
-      throw new UnsupportedOperationException();
+      try {
+        tree.serializeTo(os);
+      } catch (IOException ex) {
+        LOG.error("Caught IOException", ex);
+      }
     }
 
     @Override
     public void restore(InputStream is) {
-      throw new UnsupportedOperationException();
+      try {
+        tree.deserializeFrom(is);
+      } catch (IOException | ClassNotFoundException ex) {
+        LOG.error("Caught exception", ex);
+      }
     }
 
     @Override

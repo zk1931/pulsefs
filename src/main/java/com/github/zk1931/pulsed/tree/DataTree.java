@@ -24,6 +24,11 @@ import static com.github.zk1931.pulsed.tree.PathUtils.trimRoot;
 import static com.github.zk1931.pulsed.tree.PathUtils.ROOT_PATH;
 import static com.github.zk1931.pulsed.tree.PathUtils.SEP;
 import static com.github.zk1931.pulsed.tree.PathUtils.validatePath;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
+import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -317,8 +322,37 @@ public class DataTree {
     }
   }
 
+  /**
+   * Adds a watch to tree.
+   *
+   * @param watch the watch.
+   */
   public void addWatch(Watch watch) {
     this.watchManager.addWatch(watch);
+  }
+
+  /**
+   * Serializes the tree structure to the output stream.
+   *
+   * @param out the OutputStream.
+   * @throws IOException in case of IO failure.
+   */
+  public void serializeTo(OutputStream out) throws IOException {
+    ObjectOutputStream os = new ObjectOutputStream(out);
+    os.writeObject(this.root);
+  }
+
+  /**
+   * Restores the tree structure from the input stream.
+   *
+   * @param in the InputStream.
+   * @throws IOException in case of IO failure.
+   * @throws ClassNotFoundException class of serialized can not be found.
+   */
+  public void deserializeFrom(InputStream in)
+      throws IOException, ClassNotFoundException {
+    ObjectInputStream is = new ObjectInputStream(in);
+    this.root = (DirNode)is.readObject();
   }
 
   public DirNode createNode(DirNode curNode,

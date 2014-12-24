@@ -28,6 +28,7 @@ import java.util.zip.Adler32;
  * Directory Node.
  */
 public class DirNode extends Node {
+  private static final long serialVersionUID = 0L;
 
   public final Map<String, Node> children;
   public final long dirChecksum;

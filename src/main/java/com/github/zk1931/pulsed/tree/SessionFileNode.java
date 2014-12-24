@@ -26,6 +26,7 @@ import java.util.zip.Adler32;
  * Session File Node.
  */
 public class SessionFileNode extends FileNode {
+  private static final long serialVersionUID = 0L;
   public final long sessionID;
   public final long sessionFileChecksum;
 

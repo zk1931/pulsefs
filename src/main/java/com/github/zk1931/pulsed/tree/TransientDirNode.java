@@ -27,6 +27,8 @@ import java.util.zip.Adler32;
  * Traisient Directory Node.
  */
 public class TransientDirNode extends DirNode {
+  private static final long serialVersionUID = 0L;
+
   final long transientDirChecksum;
 
   public TransientDirNode(String fullPath,
