@@ -15,48 +15,30 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
+package com.github.zk1931.pulsed.tree;
 
 /**
- * Node of the tree.
+ * Interface for watch. Watch can monitor given node in DataTree.
  */
-public abstract class Node {
-  /**
-   * The full path of the node.
-   */
-  final String fullPath;
+public interface  Watch {
 
   /**
-   * The version of the node.
+   * Triggers the watch.
+   *
+   * @param node the node the watch is monitoring.
    */
-  final long version;
+  void trigger(Node node);
 
-  public Node(String fullPath,
-              long version) {
-    this.fullPath = fullPath;
-    this.version = version;
-  }
+  /**
+   * The path of node the watch is monitoring.
+   */
+  String getPath();
 
-  public abstract boolean isDirectory();
-
-  public abstract long getChecksum();
-
-  public abstract String getNodeName();
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    Node node = (Node)obj;
-    return this.fullPath.equals(node.fullPath);
-  }
-
-  @Override
-  public int hashCode() {
-    return this.fullPath.hashCode();
-  }
+  /**
+   * Whether the state of the node can trigger the watch or not.
+   *
+   * @param node the node the watch is monitoring.
+   * @return true if it's triggerable, otherwise false.
+   */
+  boolean isTriggerable(Node node);
 }

@@ -15,30 +15,48 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
-
-import com.github.zk1931.pulsed.tree.DataTree;
-import com.github.zk1931.pulsed.tree.Node;
+package com.github.zk1931.pulsed.tree;
 
 /**
- * Command for expiring a session.
+ * Node of the tree.
  */
-public class ExpireSessionCommand extends Command {
+public abstract class Node {
+  /**
+   * The full path of the node.
+   */
+  public final String fullPath;
 
-  private static final long serialVersionUID = 0L;
+  /**
+   * The version of the node.
+   */
+  public final long version;
 
-  final long sessionID;
-
-  public ExpireSessionCommand(long sessionID) {
-    this.sessionID = sessionID;
+  public Node(String fullPath,
+              long version) {
+    this.fullPath = fullPath;
+    this.version = version;
   }
 
-  Node execute(Pulsed pulsed) {
-    DataTree tree = pulsed.getTree();
-    tree.deleteSession(sessionID);
-    return null;
+  public abstract boolean isDirectory();
+
+  public abstract long getChecksum();
+
+  public abstract String getNodeName();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    Node node = (Node)obj;
+    return this.fullPath.equals(node.fullPath);
   }
 
-  void executeAndReply(Pulsed pulsed, Object ctx) {
+  @Override
+  public int hashCode() {
+    return this.fullPath.hashCode();
   }
 }

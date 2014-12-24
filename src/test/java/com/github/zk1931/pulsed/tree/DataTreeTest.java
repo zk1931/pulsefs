@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
+package com.github.zk1931.pulsed.tree;
 
+import com.github.zk1931.pulsed.TestBase;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;

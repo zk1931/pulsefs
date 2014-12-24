@@ -17,6 +17,8 @@
 
 package com.github.zk1931.pulsed;
 
+import com.github.zk1931.pulsed.tree.DataTree.TreeException;
+import com.github.zk1931.pulsed.tree.Node;
 import java.io.Serializable;
 
 /**
@@ -26,7 +28,7 @@ public abstract class Command implements Serializable {
 
   private static final long serialVersionUID = 0L;
 
-  abstract Node execute(Pulsed pulsed) throws DataTree.TreeException;
+  abstract Node execute(Pulsed pulsed) throws TreeException;
 
   abstract void executeAndReply(Pulsed pulsed, Object ctx);
 }

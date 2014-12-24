@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
+package com.github.zk1931.pulsed.tree;
 
 import java.util.HashMap;
 import java.util.HashSet;
