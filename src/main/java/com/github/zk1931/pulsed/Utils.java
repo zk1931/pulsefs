@@ -17,6 +17,9 @@
 
 package com.github.zk1931.pulsed;
 
+import com.github.zk1931.pulsed.tree.DirNode;
+import com.github.zk1931.pulsed.tree.FileNode;
+import com.github.zk1931.pulsed.tree.Node;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;

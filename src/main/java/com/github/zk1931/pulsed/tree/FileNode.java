@@ -15,43 +15,53 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
+package com.github.zk1931.pulsed.tree;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Map;
 import java.util.zip.Adler32;
 
 /**
- * Traisient Directory Node.
+ * File Node.
  */
-public class TransientDirNode extends DirNode {
-  final long transientDirChecksum;
+public class FileNode extends Node {
+  public final byte[] data;
+  public final long fileChecksum;
 
-  public TransientDirNode(String fullPath,
-                          long version,
-                          Map<String, Node> children) {
-    super(fullPath, version, children);
-    this.transientDirChecksum = calcChecksum();
+  public FileNode(String fullPath,
+                  long version,
+                  byte[] data) {
+    super(fullPath, version);
+    if (data == null) {
+      this.data = new byte[0];
+    } else {
+      this.data = data.clone();
+    }
+    this.fileChecksum = calcChecksum();
   }
 
   @Override
-  public String getNodeName() {
-    return "transient-dir";
+  public boolean isDirectory() {
+    return false;
   }
 
   @Override
   public long getChecksum() {
-    return this.transientDirChecksum;
+    return this.fileChecksum;
+  }
+
+  @Override
+  public String getNodeName() {
+    return "file";
   }
 
   private long calcChecksum() {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     try (DataOutputStream dout = new DataOutputStream(bout)) {
-      dout.writeLong(this.dirChecksum);
-      // Just to distinguish itself from normal directory.
-      dout.writeLong(0xdeadbeaf);
+      dout.write(data);
+      dout.writeLong(version);
+      dout.writeBytes(fullPath);
       Adler32 adler = new Adler32();
       adler.update(bout.toByteArray());
       return adler.getValue();

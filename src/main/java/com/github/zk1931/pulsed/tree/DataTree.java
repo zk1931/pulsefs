@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
+package com.github.zk1931.pulsed.tree;
 
-import static com.github.zk1931.pulsed.PathUtils.concat;
-import static com.github.zk1931.pulsed.PathUtils.head;
-import static  com.github.zk1931.pulsed.PathUtils.tail;
-import static com.github.zk1931.pulsed.PathUtils.trimRoot;
-import static com.github.zk1931.pulsed.PathUtils.ROOT_PATH;
-import static com.github.zk1931.pulsed.PathUtils.SEP;
-import static com.github.zk1931.pulsed.PathUtils.validatePath;
+import static com.github.zk1931.pulsed.tree.PathUtils.concat;
+import static com.github.zk1931.pulsed.tree.PathUtils.head;
+import static com.github.zk1931.pulsed.tree.PathUtils.tail;
+import static com.github.zk1931.pulsed.tree.PathUtils.trimRoot;
+import static com.github.zk1931.pulsed.tree.PathUtils.ROOT_PATH;
+import static com.github.zk1931.pulsed.tree.PathUtils.SEP;
+import static com.github.zk1931.pulsed.tree.PathUtils.validatePath;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DataTree {
 
-  DirNode root = null;
+  public DirNode root = null;
 
   WatchManager watchManager = new WatchManager();
 
@@ -69,7 +69,7 @@ public class DataTree {
    * @param path the path of node.
    * @return true if the path exists, false otherwise.
    */
-  boolean exist(String path) {
+  public boolean exist(String path) {
     try {
       getNode(path);
       return true;
@@ -85,6 +85,15 @@ public class DataTree {
    */
   public int size() {
     return size(this.root);
+  }
+
+  /**
+   * Gets the root node of tree.
+   *
+   * @return the root node.
+   */
+  public DirNode getRoot() {
+    return this.root;
   }
 
   /**
@@ -312,12 +321,12 @@ public class DataTree {
     this.watchManager.addWatch(watch);
   }
 
-  DirNode createNode(DirNode curNode,
-                     Node createdNode,
-                     String path,
-                     boolean recursive,
-                     boolean isTransient,
-                     List<Node> changes)
+  public DirNode createNode(DirNode curNode,
+                            Node createdNode,
+                            String path,
+                            boolean recursive,
+                            boolean isTransient,
+                            List<Node> changes)
       throws NotDirectory, NodeAlreadyExist, PathNotExist {
     Node newChild;
     DirNode newNode;
@@ -379,11 +388,11 @@ public class DataTree {
     return newNode;
   }
 
-  Node deleteNode(Node curNode,
-                  String path,
-                  long version,
-                  boolean recursive,
-                  List<Node> changes)
+  public Node deleteNode(Node curNode,
+                         String path,
+                         long version,
+                         boolean recursive,
+                         List<Node> changes)
       throws PathNotExist, DirectoryNotEmpty, NotDirectory, VersionNotMatch {
     if (path.equals("")) {
       if (curNode instanceof DirNode &&
@@ -411,10 +420,12 @@ public class DataTree {
                                   ((SessionFileNode)curNode).sessionID,
                                   ((FileNode)curNode).data);
 
-      } else {
+      } else if (curNode instanceof FileNode) {
         ret = new FileNode(curNode.fullPath,
                            -1,
                            ((FileNode)curNode).data);
+      } else {
+        throw new RuntimeException("Unknow type of node.");
       }
       // Pre-order traversal.
       changes.add(ret);
@@ -466,11 +477,11 @@ public class DataTree {
     return newNode;
   }
 
-  Node setData(Node curNode,
-               String path,
-               byte[] data,
-               long version,
-               List<Node> changes)
+  public Node setData(Node curNode,
+                      String path,
+                      byte[] data,
+                      long version,
+                      List<Node> changes)
       throws PathNotExist, VersionNotMatch, DirectoryNode, NotDirectory {
     if (path.equals("")) {
       if (version != -1 && curNode.version != version) {
@@ -529,7 +540,7 @@ public class DataTree {
     return sum;
   }
 
-  void triggerWatches(List<Node> changes) {
+  public void triggerWatches(List<Node> changes) {
     synchronized(this) {
       for (Node node: changes) {
         this.watchManager.triggerAndRemoveWatches(node);
@@ -541,84 +552,84 @@ public class DataTree {
    * Base class for all the tree exceptions.
    */
   public abstract static class TreeException extends Exception {
-    TreeException(String desc) {
+    public TreeException(String desc) {
       super(desc);
     }
 
-    TreeException() {}
+    public TreeException() {}
   }
 
   /**
    * Exception for a non-existing path.
    */
   public static class PathNotExist extends TreeException {
-    PathNotExist(String desc) {
+    public PathNotExist(String desc) {
       super(desc);
     }
 
-    PathNotExist() {}
+    public PathNotExist() {}
   }
 
   /**
    * Exception for node arealdy exist.
    */
   public static class NodeAlreadyExist extends TreeException {
-    NodeAlreadyExist(String desc) {
+    public NodeAlreadyExist(String desc) {
       super(desc);
     }
 
-    NodeAlreadyExist() {}
+    public NodeAlreadyExist() {}
   }
 
   /**
    * Exception for unmatched version.
    */
   public static class VersionNotMatch extends TreeException {
-    VersionNotMatch(String desc) {
+    public VersionNotMatch(String desc) {
       super(desc);
     }
 
-    VersionNotMatch() {}
+    public VersionNotMatch() {}
   }
 
   /**
    * Exception of node is not directory.
    */
   public static class NotDirectory extends TreeException {
-    NotDirectory(String desc) {
+    public NotDirectory(String desc) {
       super(desc);
     }
 
-    NotDirectory() {}
+    public NotDirectory() {}
   }
 
   /**
    * Exception for an invalid path.
    */
   public static class InvalidPath extends TreeException {
-    InvalidPath(String desc) {
+    public InvalidPath(String desc) {
       super(desc);
     }
 
-    InvalidPath() {}
+    public InvalidPath() {}
   }
 
   /**
    * Exception for non-emtpy directory.
    */
   public static class DirectoryNotEmpty extends TreeException {
-    DirectoryNotEmpty(String desc) {
+    public DirectoryNotEmpty(String desc) {
       super(desc);
     }
 
-    DirectoryNotEmpty() {}
+    public DirectoryNotEmpty() {}
   }
 
   /**
    * Exception for trying to delete root directory.
    */
   public static class DeleteRootDir extends TreeException {
-    DeleteRootDir() {
+    public DeleteRootDir() {
       super("Cannot delete the root directory");
     }
   }
@@ -627,10 +638,10 @@ public class DataTree {
    * Exception for storing data on directory node.
    */
   public static class DirectoryNode extends TreeException {
-    DirectoryNode(String desc) {
+    public DirectoryNode(String desc) {
       super(desc);
     }
 
-    DirectoryNode() {}
+    public DirectoryNode() {}
   }
 }

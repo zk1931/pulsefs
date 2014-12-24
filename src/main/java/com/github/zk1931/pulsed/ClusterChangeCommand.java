@@ -17,6 +17,11 @@
 
 package com.github.zk1931.pulsed;
 
+import com.github.zk1931.pulsed.tree.DataTree;
+import com.github.zk1931.pulsed.tree.DirNode;
+import com.github.zk1931.pulsed.tree.FileNode;
+import com.github.zk1931.pulsed.tree.Node;
+import com.github.zk1931.pulsed.tree.PathUtils;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,7 +49,7 @@ public class ClusterChangeCommand extends Command {
     DataTree tree = pulsed.getTree();
     // Gets node /pulsed/servers
     Node serversNode = tree.getNode(PulsedConfig.PULSED_SERVERS_PATH);
-    DirNode rootNode = tree.root;
+    DirNode rootNode = tree.getRoot();
     List<Node> changes = new LinkedList<Node>();
     for (Node child : ((DirNode)serversNode).children.values()) {
       // Deletes all the nodes under /pulsed/servers

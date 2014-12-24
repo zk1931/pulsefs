@@ -15,45 +15,54 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
+package com.github.zk1931.pulsed.tree;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.zip.Adler32;
 
 /**
- * Session File Node.
+ * Directory Node.
  */
-public class SessionFileNode extends FileNode {
-  final long sessionID;
-  final long sessionFileChecksum;
+public class DirNode extends Node {
 
-  public SessionFileNode(String fullPath,
-                         long version,
-                         long sessionID,
-                         byte[] data) {
-    super(fullPath, version, data);
-    this.sessionID = sessionID;
-    this.sessionFileChecksum = calcChecksum();
+  public final Map<String, Node> children;
+  public final long dirChecksum;
+
+  public DirNode(String fullPath,
+                 long version,
+                 Map<String, Node> children) {
+    super(fullPath, version);
+    this.children = Collections.unmodifiableMap(children);
+    this.dirChecksum = calcChecksum();
   }
 
   @Override
-  public String getNodeName() {
-    return "session-file";
+  public boolean isDirectory() {
+    return true;
   }
 
   @Override
   public long getChecksum() {
-    return this.sessionFileChecksum;
+    return this.dirChecksum;
+  }
+
+  @Override
+  public String getNodeName() {
+    return "dir";
   }
 
   private long calcChecksum() {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     try (DataOutputStream dout = new DataOutputStream(bout)) {
-      // The checksum of parent class.
-      dout.writeLong(this.fileChecksum);
-      dout.writeLong(this.sessionID);
+      dout.writeLong(version);
+      dout.writeBytes(fullPath);
+      for (Node child : children.values()) {
+        dout.writeLong(child.getChecksum());
+      }
       Adler32 adler = new Adler32();
       adler.update(bout.toByteArray());
       return adler.getValue();

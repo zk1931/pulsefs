@@ -15,30 +15,7 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
-
 /**
- * Interface for watch. Watch can monitor given node in DataTree.
+ * A reference implementation for javazab.
  */
-public interface  Watch {
-
-  /**
-   * Triggers the watch.
-   *
-   * @param node the node the watch is monitoring.
-   */
-  void trigger(Node node);
-
-  /**
-   * The path of node the watch is monitoring.
-   */
-  String getPath();
-
-  /**
-   * Whether the state of the node can trigger the watch or not.
-   *
-   * @param node the node the watch is monitoring.
-   * @return true if it's triggerable, otherwise false.
-   */
-  boolean isTriggerable(Node node);
-}
+package com.github.zk1931.pulsed.tree;

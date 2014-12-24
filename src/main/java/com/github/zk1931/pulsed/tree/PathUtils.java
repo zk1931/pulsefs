@@ -15,17 +15,15 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
-
-import com.github.zk1931.pulsed.DataTree.InvalidPath;
+package com.github.zk1931.pulsed.tree;
 
 /**
  * Utility functions for tree path.
  */
 public final class PathUtils {
 
-  static final String ROOT_PATH = "/";
-  static final String SEP = "/";
+  public static final String ROOT_PATH = "/";
+  public static final String SEP = "/";
 
   private PathUtils() {}
 
@@ -64,12 +62,12 @@ public final class PathUtils {
     return path.substring(ROOT_PATH.length());
   }
 
-  public static void validatePath(String path) throws InvalidPath {
+  public static void validatePath(String path) throws DataTree.InvalidPath {
     if (!path.startsWith(ROOT_PATH)) {
-      throw new InvalidPath("Path must start with " + ROOT_PATH);
+      throw new DataTree.InvalidPath("Path must start with " + ROOT_PATH);
     }
     if (!path.equals(ROOT_PATH) && path.endsWith("/")) {
-      throw new InvalidPath("Path other than root must not end with /");
+      throw new DataTree.InvalidPath("Path other than root cannot end with /");
     }
   }
 }

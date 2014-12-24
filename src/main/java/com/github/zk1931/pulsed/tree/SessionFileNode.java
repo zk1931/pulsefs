@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.github.zk1931.pulsed;
+package com.github.zk1931.pulsed.tree;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -23,45 +23,37 @@ import java.io.IOException;
 import java.util.zip.Adler32;
 
 /**
- * File Node.
+ * Session File Node.
  */
-public class FileNode extends Node {
-  final byte[] data;
-  final long fileChecksum;
+public class SessionFileNode extends FileNode {
+  public final long sessionID;
+  public final long sessionFileChecksum;
 
-  public FileNode(String fullPath,
-                  long version,
-                  byte[] data) {
-    super(fullPath, version);
-    if (data == null) {
-      this.data = new byte[0];
-    } else {
-      this.data = data.clone();
-    }
-    this.fileChecksum = calcChecksum();
-  }
-
-  @Override
-  public boolean isDirectory() {
-    return false;
-  }
-
-  @Override
-  public long getChecksum() {
-    return this.fileChecksum;
+  public SessionFileNode(String fullPath,
+                         long version,
+                         long sessionID,
+                         byte[] data) {
+    super(fullPath, version, data);
+    this.sessionID = sessionID;
+    this.sessionFileChecksum = calcChecksum();
   }
 
   @Override
   public String getNodeName() {
-    return "file";
+    return "session-file";
+  }
+
+  @Override
+  public long getChecksum() {
+    return this.sessionFileChecksum;
   }
 
   private long calcChecksum() {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     try (DataOutputStream dout = new DataOutputStream(bout)) {
-      dout.write(data);
-      dout.writeLong(version);
-      dout.writeBytes(fullPath);
+      // The checksum of parent class.
+      dout.writeLong(this.fileChecksum);
+      dout.writeLong(this.sessionID);
       Adler32 adler = new Adler32();
       adler.update(bout.toByteArray());
       return adler.getValue();
