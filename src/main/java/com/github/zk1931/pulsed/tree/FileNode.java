@@ -26,6 +26,8 @@ import java.util.zip.Adler32;
  * File Node.
  */
 public class FileNode extends Node {
+  private static final long serialVersionUID = 0L;
+
   public final byte[] data;
   public final long fileChecksum;
 
