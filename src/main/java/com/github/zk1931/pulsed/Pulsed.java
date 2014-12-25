@@ -51,6 +51,7 @@ public final class Pulsed {
   private Set<String> activeMembers;
   private Set<String> clusterMembers;
   private String leader;
+  private boolean isBroadcasting = false;
 
   private ExecutorService fixedPool = Executors.newFixedThreadPool(1);
   // transient state
@@ -154,6 +155,10 @@ public final class Pulsed {
     this.ownedSessions.add(session);
   }
 
+  public boolean inWorkingState() {
+    return this.isBroadcasting;
+  }
+
   /**
    * State machine of Pulsed.
    */
@@ -221,6 +226,7 @@ public final class Pulsed {
     @Override
     public void recovering(PendingRequests pendingRequests) {
       LOG.info("Recovering");
+      isBroadcasting = false;
     }
 
     @Override
@@ -239,6 +245,7 @@ public final class Pulsed {
       } catch (IOException | ZabException ex) {
         LOG.error("Exception : ", ex);
       }
+      isBroadcasting = true;
     }
 
     @Override
@@ -247,6 +254,7 @@ public final class Pulsed {
                 leaderId, clusterConfig);
       leader = leaderId;
       clusterMembers = clusterConfig;
+      isBroadcasting = true;
     }
   }
 }
