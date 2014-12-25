@@ -377,4 +377,48 @@ public class DataTreeTest extends TestBase {
     Assert.assertTrue(tree.exist("/session1/file1"));
     Assert.assertTrue(tree.exist("/session1/file2"));
   }
+
+  @Test
+  public void testTransaction() throws Exception {
+    DataTree tree = new DataTree();
+    tree.createDirInStagingArea("/foo", false);
+    tree.createFileInStagingArea("/foo/bar1", null, false, false);
+    tree.createFileInStagingArea("/foo/bar2", null, false, false);
+    tree.deleteNodeInStagingArea("/foo/bar2", -1, false);
+    // Verifies that the changes in staging area is not visible.
+    Assert.assertEquals(1, tree.size());
+    Assert.assertFalse(tree.exist("/foo"));
+    Assert.assertFalse(tree.exist("/foo/bar1"));
+    Assert.assertFalse(tree.exist("/foo/bar2"));
+    tree.commitStagingChanges();
+    // Verifies the changes in staging area are visible after commit.
+    Assert.assertEquals(3, tree.size());
+    Assert.assertTrue(tree.exist("/foo"));
+    Assert.assertTrue(tree.exist("/foo/bar1"));
+    Assert.assertFalse(tree.exist("/foo/bar2"));
+
+    tree.createSessionFileInStagingArea("/foo/session1", new byte[0], 1,
+                                        false, false);
+    tree.createSessionFileInStagingArea("/foo/session2", new byte[0], 2,
+                                        false, false);
+    Assert.assertEquals(3, tree.size());
+    tree.commitStagingChanges();
+    // Verifies the changes in staging area are visible after commit.
+    Assert.assertEquals(5, tree.size());
+    Assert.assertTrue(tree.exist("/foo/session1"));
+    Assert.assertTrue(tree.exist("/foo/session2"));
+    tree.deleteSession(1);
+    Assert.assertEquals(4, tree.size());
+    Assert.assertFalse(tree.exist("/foo/session1"));
+    tree.deleteSession(2);
+    Assert.assertEquals(3, tree.size());
+    Assert.assertFalse(tree.exist("/foo/session2"));
+
+    tree.createFileInStagingArea("/foo/bar3", null, false, false);
+    Assert.assertEquals(3, tree.size());
+    // Aborts changes in staging area.
+    tree.abortStagingChanges();
+    tree.createFile("/foo/bar3", null, false, false);
+    Assert.assertEquals(4, tree.size());
+  }
 }

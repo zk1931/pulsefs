@@ -38,9 +38,9 @@ import org.slf4j.LoggerFactory;
 public class DataTree {
 
   public DirNode root = null;
-
+  private DirNode stagingRoot = null;
+  private final List<Node> changedNodes = new LinkedList<Node>();
   WatchManager watchManager = new WatchManager();
-
   SessionFileManager sessionManager = new SessionFileManager();
 
   private static final Logger LOG = LoggerFactory.getLogger(DataTree.class);
@@ -52,6 +52,35 @@ public class DataTree {
     this.root = new DirNode(ROOT_PATH,
                             (long)0,
                             new TreeMap<String, Node>());
+    this.stagingRoot = this.root;
+  }
+
+  /**
+   * Commits all the changes in staging area, once committed, all the changes
+   * in staging area will be visible.
+   */
+  public void commitStagingChanges() {
+    this.root = this.stagingRoot;
+    for (Node node : changedNodes) {
+      if (node instanceof SessionFileNode) {
+        SessionFileNode sn = (SessionFileNode)node;
+        if (node.version == 0) {
+          this.sessionManager.addFileToSession(sn.sessionID, sn.fullPath);
+        } else if (node.version == -1) {
+          this.sessionManager.removeFileFromSession(sn.sessionID, sn.fullPath);
+        }
+      }
+      this.watchManager.triggerAndRemoveWatches(node);
+    }
+    this.changedNodes.clear();
+  }
+
+  /**
+   * Aborts all the changes in staging area.
+   */
+  public void abortStagingChanges() {
+    this.stagingRoot = this.root;
+    this.changedNodes.clear();
   }
 
   /**
@@ -148,15 +177,33 @@ public class DataTree {
                          boolean recursive,
                          boolean isTransient)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+    try {
+      Node ret = createFileInStagingArea(path, data, recursive, isTransient);
+      commitStagingChanges();
+      return ret;
+    } catch (TreeException ex) {
+      abortStagingChanges();
+      throw ex;
+    }
+  }
+
+  /**
+   * Creates a file in staging area. See {@link #createFile DataTree} for
+   * parameters.
+   */
+  public Node createFileInStagingArea(String path,
+                                      byte[] data,
+                                      boolean recursive,
+                                      boolean isTransient)
+      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
     validatePath(path);
-    // Records the nodes that have been changed(version change/newly created)
-    // by this request.
-    List<Node> changes = new LinkedList<Node>();
-    // Constructs created node first.
     Node createdNode = new FileNode(path, 0, data);
-    this.root = createNode(root, createdNode, trimRoot(path), recursive,
-                           isTransient, changes);
-    triggerWatches(changes);
+    stagingRoot = createNode(stagingRoot,
+                             createdNode,
+                             trimRoot(path),
+                             recursive,
+                             isTransient,
+                             changedNodes);
     return createdNode;
   }
 
@@ -179,17 +226,35 @@ public class DataTree {
                                 boolean recursive,
                                 boolean isTransient)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+    try {
+      Node ret = createSessionFileInStagingArea(path, data, sessionID,
+                                                recursive, isTransient);
+      commitStagingChanges();
+      return ret;
+    } catch (TreeException ex) {
+      abortStagingChanges();
+      throw ex;
+    }
+  }
+
+  /**
+   * Creates a session file in staging area.
+   * See {@link #createSessionFile DataTree} for parameters.
+   */
+  public Node createSessionFileInStagingArea(String path,
+                                             byte[] data,
+                                             long sessionID,
+                                             boolean recursive,
+                                             boolean isTransient)
+      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
     validatePath(path);
-    // Records the nodes that have been changed(version change/newly created)
-    // by this request.
-    List<Node> changes = new LinkedList<Node>();
-    // Constructs created node first.
     Node createdNode = new SessionFileNode(path, 0, sessionID, data);
-    this.root = createNode(root, createdNode, trimRoot(path), recursive,
-                           isTransient, changes);
-    triggerWatches(changes);
-    // Adds the file to session.
-    this.sessionManager.addFileToSession(sessionID, path);
+    stagingRoot = createNode(stagingRoot,
+                             createdNode,
+                             trimRoot(path),
+                             recursive,
+                             isTransient,
+                             changedNodes);
     return createdNode;
   }
 
@@ -203,18 +268,32 @@ public class DataTree {
    * @throws InvalidPath if the path is invalid.
    * @throws NotDirectory if the path goes through a non-directory node.
    */
-  public Node createDir(String path,
-                        boolean recursive)
+  public Node createDir(String path, boolean recursive)
+      throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
+    try {
+      Node ret = createDirInStagingArea(path, recursive);
+      commitStagingChanges();
+      return ret;
+    } catch (TreeException ex) {
+      abortStagingChanges();
+      throw ex;
+    }
+  }
+
+  /**
+   * Creates a directory in staging area. See {@link #createDir DataTree} for
+   * parameters.
+   */
+  public Node createDirInStagingArea(String path, boolean recursive)
       throws NotDirectory, NodeAlreadyExist, PathNotExist, InvalidPath {
     validatePath(path);
-    // Records the nodes that have been changed(version change/newly created)
-    // by this request.
-    List<Node> changes = new LinkedList<Node>();
-    // Constructs created node first.
     Node createdNode = new DirNode(path, 0, new TreeMap<String, Node>());
-    this.root =
-      createNode(root, createdNode, trimRoot(path), recursive, false, changes);
-    triggerWatches(changes);
+    stagingRoot = createNode(stagingRoot,
+                             createdNode,
+                             trimRoot(path),
+                             recursive,
+                             false,
+                             changedNodes);
     return createdNode;
   }
 
@@ -241,25 +320,37 @@ public class DataTree {
                          boolean recursive)
       throws PathNotExist, DirectoryNotEmpty, InvalidPath, DeleteRootDir,
              NotDirectory, VersionNotMatch {
+    try {
+      Node ret = deleteNodeInStagingArea(path, version, recursive);
+      commitStagingChanges();
+      return ret;
+    } catch (TreeException ex) {
+      abortStagingChanges();
+      throw ex;
+    }
+  }
+
+  /**
+   * Deletes a node in staging area. See {@link #deleteNode DataTree} for
+   * parameters.
+   */
+  public Node deleteNodeInStagingArea(String path,
+                                      long version,
+                                      boolean recursive)
+      throws PathNotExist, DirectoryNotEmpty, InvalidPath, DeleteRootDir,
+             NotDirectory, VersionNotMatch {
     validatePath(path);
     path = trimRoot(path);
     if (path.equals("")) {
       throw new DeleteRootDir();
     }
-    // Records the nodes that have been changed(version change/deleted)
-    // by this request.
-    List<Node> changes = new LinkedList<Node>();
-    this.root = (DirNode)deleteNode(root, path, version, recursive, changes);
-    triggerWatches(changes);
-    for (Node node : changes) {
-      if (node instanceof SessionFileNode) {
-        // IF it's a session file we also need to remove it from the map.
-        long sessionID = ((SessionFileNode)node).sessionID;
-        this.sessionManager.removeFileFromSession(sessionID, node.fullPath);
-      }
-    }
-    Node deletedNode = changes.get(0);
-    return deletedNode;
+    int idx = changedNodes.size();
+    stagingRoot = (DirNode)deleteNode(stagingRoot,
+                                      path,
+                                      version,
+                                      recursive,
+                                      changedNodes);
+    return changedNodes.get(idx);
   }
 
   /**
@@ -279,15 +370,32 @@ public class DataTree {
   public Node setData(String path, byte[] data, long version)
       throws PathNotExist, InvalidPath, VersionNotMatch, DirectoryNode,
              NotDirectory {
+    try {
+      Node ret = setDataInStagingArea(path, data, version);
+      commitStagingChanges();
+      return ret;
+    } catch (TreeException ex) {
+      abortStagingChanges();
+      throw ex;
+    }
+  }
+
+  /**
+   * Update a node in staging area. See {@link #setData DataTree} for
+   * parameters.
+   */
+  public Node setDataInStagingArea(String path, byte[] data, long version)
+      throws PathNotExist, InvalidPath, VersionNotMatch, DirectoryNode,
+             NotDirectory {
     validatePath(path);
     path = trimRoot(path);
-    // Records the nodes that have been changed(version change/data change)
-    // by this request.
-    List<Node> changes = new LinkedList<Node>();
-    this.root = (DirNode)setData(this.root, path, data, version, changes);
-    triggerWatches(changes);
-    Node updatedNode = changes.get(0);
-    return updatedNode;
+    int idx = changedNodes.size();
+    stagingRoot = (DirNode)setData(stagingRoot,
+                                   path,
+                                   data,
+                                   version,
+                                   changedNodes);
+    return changedNodes.get(idx);
   }
 
   /**
@@ -296,37 +404,44 @@ public class DataTree {
    * @param sessionID the ID of session.
    */
   public void deleteSession(long sessionID) {
+    deleteSessionInStagingArea(sessionID);
+    commitStagingChanges();
+  }
+
+  /**
+   * Delete session in staging area. See {@link #deleteSession DataTree} for
+   * parameters.
+   */
+  public void deleteSessionInStagingArea(long sessionID) {
     try {
       Set<String> files = this.sessionManager.getSessionFiles(sessionID);
       if (files == null) {
         return;
       }
-      List<Node> changes = new LinkedList<Node>();
-      DirNode newRoot = this.root;
       for (String file : files) {
-        newRoot = (DirNode)deleteNode(newRoot, PathUtils.trimRoot(file), -1,
-                                      false, changes);
-        this.sessionManager.removeFileFromSession(sessionID, file);
+        deleteNodeInStagingArea(file, -1, false);
       }
-      // Enables changes.
-      this.root = newRoot;
-      triggerWatches(changes);
     } catch (TreeException ex) {
       LOG.error("Caught exception in deleteSession", ex);
       throw new RuntimeException(ex);
     }
   }
 
+  /**
+   * Adds a watch to tree. See {@link Watch}.
+   *
+   * @param the watch.
+   */
   public void addWatch(Watch watch) {
     this.watchManager.addWatch(watch);
   }
 
-  public DirNode createNode(DirNode curNode,
-                            Node createdNode,
-                            String path,
-                            boolean recursive,
-                            boolean isTransient,
-                            List<Node> changes)
+  DirNode createNode(DirNode curNode,
+                     Node createdNode,
+                     String path,
+                     boolean recursive,
+                     boolean isTransient,
+                     List<Node> changes)
       throws NotDirectory, NodeAlreadyExist, PathNotExist {
     Node newChild;
     DirNode newNode;
@@ -388,11 +503,11 @@ public class DataTree {
     return newNode;
   }
 
-  public Node deleteNode(Node curNode,
-                         String path,
-                         long version,
-                         boolean recursive,
-                         List<Node> changes)
+  Node deleteNode(Node curNode,
+                  String path,
+                  long version,
+                  boolean recursive,
+                  List<Node> changes)
       throws PathNotExist, DirectoryNotEmpty, NotDirectory, VersionNotMatch {
     if (path.equals("")) {
       if (curNode instanceof DirNode &&
@@ -477,11 +592,11 @@ public class DataTree {
     return newNode;
   }
 
-  public Node setData(Node curNode,
-                      String path,
-                      byte[] data,
-                      long version,
-                      List<Node> changes)
+  Node setData(Node curNode,
+               String path,
+               byte[] data,
+               long version,
+               List<Node> changes)
       throws PathNotExist, VersionNotMatch, DirectoryNode, NotDirectory {
     if (path.equals("")) {
       if (version != -1 && curNode.version != version) {
