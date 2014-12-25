@@ -19,12 +19,9 @@ package com.github.zk1931.pulsed;
 
 import com.github.zk1931.pulsed.tree.DataTree;
 import com.github.zk1931.pulsed.tree.DirNode;
-import com.github.zk1931.pulsed.tree.FileNode;
 import com.github.zk1931.pulsed.tree.Node;
 import com.github.zk1931.pulsed.tree.PathUtils;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -49,24 +46,17 @@ public class ClusterChangeCommand extends Command {
     DataTree tree = pulsed.getTree();
     // Gets node /pulsed/servers
     Node serversNode = tree.getNode(PulsedConfig.PULSED_SERVERS_PATH);
-    DirNode rootNode = tree.getRoot();
-    List<Node> changes = new LinkedList<Node>();
     for (Node child : ((DirNode)serversNode).children.values()) {
       // Deletes all the nodes under /pulsed/servers
-      rootNode =
-        (DirNode)tree.deleteNode(rootNode, PathUtils.trimRoot(child.fullPath),
-                                 -1, false, changes);
+      tree.deleteNodeInStagingArea(child.fullPath, -1, false);
     }
     for (String server : clusterMembers) {
       // Creates new nodes.
       String path = PulsedConfig.PULSED_SERVERS_PATH + PathUtils.SEP + server;
-      FileNode newNode = new FileNode(path, 0, new byte[0]);
-      rootNode = tree.createNode(rootNode, newNode, PathUtils.trimRoot(path),
-                                 false, false, changes);
+      tree.createFileInStagingArea(path, new byte[0], false, false);
     }
-    // Enables changes.
-    tree.root = rootNode;
-    tree.triggerWatches(changes);
+    // Commit changes.
+    tree.commitStagingChanges();
     return null;
   }
 
