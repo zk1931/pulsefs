@@ -55,6 +55,9 @@ public class SessionFilter implements Filter {
                        ServletResponse response,
                        FilterChain chain) throws IOException, ServletException {
     if (request instanceof HttpServletRequest) {
+      if (!(response instanceof HttpServletResponse)) {
+        throw new ServletException("Not HttpServletResponse object");
+      }
       HttpServletRequest httpReq = (HttpServletRequest)request;
       if (httpReq.getQueryString() != null) {
         Matcher matcher = pattern.matcher(httpReq.getQueryString());
@@ -66,14 +69,15 @@ public class SessionFilter implements Filter {
           if (!this.pd.getTree().exist(sessionPath)) {
             // Session doesn't exist, reject this request.
             LOG.debug("session {} doesn't exist, reject request.", session);
-            if (!(response instanceof HttpServletResponse)) {
-              throw new ServletException("Not HttpServletResponse object");
-            }
             Utils.replyPrecondFailed((HttpServletResponse)response,
                                       "Session " + session + " times out");
             return;
           }
         }
+      }
+      if (!pd.inWorkingState()) {
+        Utils.replyServiceUnavailable((HttpServletResponse)response);
+        return;
       }
     }
     chain.doFilter(request, response);
