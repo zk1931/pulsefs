@@ -22,6 +22,7 @@ import com.github.zk1931.pulsefs.tree.DataTree;
 import com.github.zk1931.pulsefs.tree.PathUtils;
 import com.github.zk1931.pulsefs.tree.Node;
 import java.io.IOException;
+import java.util.concurrent.locks.Lock;
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
@@ -198,32 +199,34 @@ public class  TreeHandler extends HttpServlet {
     HttpServletResponse response = (HttpServletResponse)(ctx.getResponse());
     HttpWatch watch = new HttpWatch(version, recursive, path, ctx);
     Node node;
-    // Since other threads might be modifying the tree or adding watches,
-    // we need lock the whole tree.
-    synchronized(tree) {
+    Lock rLock = tree.getReadLock();
+    try {
+      // Since in deliver threads the tree might get changesd, before reading
+      // the state we need to grab the read lock.
+      rLock.lock();
       try {
-        try {
-          node = tree.getNode(path);
-        } catch (DataTree.PathNotExist ex) {
-          node = null;
-          if (version != 0) {
-            Utils.replyNotFound(response, ex.getMessage(), ctx);
-          } else {
-            tree.addWatch(watch);
-          }
+        node = tree.getNode(path);
+      } catch (DataTree.PathNotExist ex) {
+        node = null;
+        if (version != 0) {
+          Utils.replyNotFound(response, ex.getMessage(), ctx);
+        } else {
+          tree.addWatch(watch);
         }
-        if (node != null) {
-          if (watch.isTriggerable(node)) {
-            // The watch is for the version and it's triggerable now, triggers
-            // it directly.
-            watch.trigger(node);
-          } else {
-            tree.addWatch(watch);
-          }
-        }
-      } catch (DataTree.TreeException ex) {
-        Utils.replyBadRequest(response, ex.getMessage(), ctx);
       }
+      if (node != null) {
+        if (watch.isTriggerable(node)) {
+          // The watch is for the version and it's triggerable now, triggers
+          // it directly.
+          watch.trigger(node);
+        } else {
+          tree.addWatch(watch);
+        }
+      }
+    } catch (DataTree.TreeException ex) {
+      Utils.replyBadRequest(response, ex.getMessage(), ctx);
+    } finally {
+      rLock.unlock();
     }
   }
 
