@@ -52,6 +52,8 @@ public final class PulseFS {
   private Set<String> clusterMembers;
   private String leader;
   private boolean isBroadcasting = false;
+  private final PulseFSConfig config;
+  private final ZabConfig zabConfig;
 
   private ExecutorService fixedPool = Executors.newFixedThreadPool(1);
   // transient state
@@ -75,21 +77,22 @@ public final class PulseFS {
     }
   }
 
-  public PulseFS(String serverId, String joinPeer, String logDir) {
-    this.serverId = serverId;
-    if (this.serverId != null && joinPeer == null) {
-      joinPeer = this.serverId;
+  public PulseFS(PulseFSConfig config) {
+    this.config = config;
+    this.serverId = config.getServerId();
+    if (this.serverId != null && config.getJoinPeer() == null) {
+      config.setJoinPeer(this.serverId);
     }
-    ZabConfig config = new ZabConfig();
-    if (logDir == null) {
-      logDir = this.serverId;
+    this.zabConfig = new ZabConfig();
+    if (config.getLogDir() == null) {
+      config.setLogDir(this.serverId);
     }
-    config.setLogDir(logDir);
-    if (joinPeer != null) {
-      zab = new Zab(stateMachine, config, serverId, joinPeer);
+    zabConfig.setLogDir(config.getLogDir());
+    if (config.getJoinPeer() != null) {
+      zab = new Zab(stateMachine, zabConfig, serverId, config.getJoinPeer());
     } else {
       // Recovers from log directory.
-      zab = new Zab(stateMachine, config);
+      zab = new Zab(stateMachine, zabConfig);
     }
     this.serverId = zab.getServerId();
     terminatorFuture = fixedPool.submit(new Terminator(ownedSessions));
@@ -136,20 +139,20 @@ public final class PulseFS {
   }
 
   public void manageSession(long sessionID) {
-    Session session = new Session(sessionID, PulseFSConfig.SESSION_TIMEOUT);
+    Session session = new Session(sessionID, config.getSessionTimeout());
     LOG.debug("Add session {}", session);
     this.ownedSessions.remove(session);
     this.ownedSessions.add(session);
   }
 
   public void abandonSession(long sessionID) {
-    Session session = new Session(sessionID, PulseFSConfig.SESSION_TIMEOUT);
+    Session session = new Session(sessionID, config.getSessionTimeout());
     LOG.debug("Abandon session {}", session);
     this.ownedSessions.remove(session);
   }
 
   public void renewSession(long sessionID) {
-    Session session = new Session(sessionID, PulseFSConfig.SESSION_TIMEOUT);
+    Session session = new Session(sessionID, config.getSessionTimeout());
     LOG.debug("Renew session {}", session);
     this.ownedSessions.remove(session);
     this.ownedSessions.add(session);

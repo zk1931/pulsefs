@@ -23,7 +23,8 @@ def single_server(request):
     executable = get_executable()
     directory = "localhost:5000"
     request.cls.baseurl = "http://localhost:8080"
-    args = [executable, "-port", "8080", "-addr", "localhost:5000"]
+    args = [executable, "-port", "8080", "-addr", "localhost:5000",
+            "-timeout", "3"]
     process = subprocess.Popen(args)
     for i in range(0, 10):
         try:
@@ -54,9 +55,11 @@ def multiple_servers(request):
     request.cls.server1 = server1
     request.cls.server2 = server2
     request.cls.server3 = server3
-    args1 = [exe, "-port", "8081", "-addr", zab_server1]
-    args2 = [exe, "-port", "8082", "-addr", zab_server2, "-join", zab_server1]
-    args3 = [exe, "-port", "8083", "-addr", zab_server3, "-join", zab_server1]
+    args1 = [exe, "-port", "8081", "-addr", zab_server1, "-timeout", "3"]
+    args2 = [exe, "-port", "8082", "-addr", zab_server2, "-join", zab_server1,
+             "-timeout", "3"]
+    args3 = [exe, "-port", "8083", "-addr", zab_server3, "-join", zab_server1,
+             "-timeout", "3"]
 
     process1 = subprocess.Popen(args1)
     process2 = subprocess.Popen(args2)
