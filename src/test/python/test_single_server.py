@@ -440,9 +440,20 @@ class TestSingleServer(object):
         assert res.status_code == 201
         location = res.headers["Location"]
         assert requests.get(self.baseurl + location).status_code == 200
+
+        session = location[location.rfind("/") + 1:]
+        # creating ephemeral file.
+        res = requests.put(self.baseurl + "/ef?ephemeral&session=" + session)
+        # verifying the ephemeral file gets created.
+        assert res.status_code == 201
+        assert requests.get(self.baseurl + "/ef").status_code == 200
+
         # sleeping for 5 seconds and the session should be expired.
         time.sleep(5)
+        # session expires
         assert requests.get(self.baseurl + location).status_code == 404
+        # ephemeral file gets deleted.
+        assert requests.get(self.baseurl + "/ef").status_code == 404
 
         # creating another session.
         res = requests.post(self.baseurl + directory)
@@ -465,6 +476,13 @@ class TestSingleServer(object):
         assert res.status_code == 201
         location = res.headers["Location"]
         assert requests.get(self.baseurl + location).status_code == 200
+        session = location[location.rfind("/") + 1:]
+        # creating ephemeral file.
+        res = requests.put(self.baseurl + "/ef?ephemeral&session=" + session)
+        # verifying the ephemeral file gets created.
+        assert res.status_code == 201
+        assert requests.get(self.baseurl + "/ef").status_code == 200
+
         stop = False
 
         def renew_session():
@@ -477,9 +495,11 @@ class TestSingleServer(object):
 
         # sleeping for 5 seconds and the session should not be expired.
         time.sleep(5)
+        # session file still exists.
         assert requests.get(self.baseurl + location).status_code == 200
+        # ephemeral file still exists.
+        assert requests.get(self.baseurl + "/ef").status_code == 200
 
-        session = location[location.rfind("/") + 1:]
         # getting root node with unexpired session id.
         res = requests.get(self.baseurl + "/?session=" + session)
         # succeed.

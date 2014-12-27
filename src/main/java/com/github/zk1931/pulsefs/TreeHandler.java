@@ -100,14 +100,24 @@ public class  TreeHandler extends HttpServlet {
     boolean dir;
     boolean recursive;
     boolean isTransient;
+    boolean ephemeral;
+    long sessionID = -1;
     byte[] data = Utils.readData(request);
     try {
       // Parse the query parameters.
       recursive = request.getParameter("recursive") != null;
       dir = request.getParameter("dir") != null;
       isTransient = request.getParameter("transient") != null;
+      ephemeral = request.getParameter("ephemeral") != null;
       if (request.getParameter("version") != null) {
         version = Long.parseLong(request.getParameter("version"));
+      }
+      if (request.getParameter("session") != null) {
+        sessionID = Long.parseLong(request.getParameter("session"));
+      }
+      if (sessionID < 0 && ephemeral) {
+        throw new IllegalArgumentException("Must specify session for " +
+            "ephemeral node.");
       }
     } catch (IllegalArgumentException ex) {
       Utils.replyBadRequest(response, ex.getMessage());
@@ -119,7 +129,8 @@ public class  TreeHandler extends HttpServlet {
         // Means it's a directory.
         cmd = new CreateDirCommand(path, recursive);
       } else {
-        cmd = new PutCommand(path, data, recursive, version, isTransient);
+        cmd = new PutCommand(path, data, recursive, version,
+                             isTransient, ephemeral, sessionID);
       }
       this.fs.proposeStateChange(cmd, context);
     } catch (ZabException ex) {
