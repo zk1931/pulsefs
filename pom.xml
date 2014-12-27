@@ -2,10 +2,10 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.github.zk1931</groupId>
-  <artifactId>pulsed</artifactId>
+  <artifactId>pulsefs</artifactId>
   <packaging>jar</packaging>
   <version>0.1.0-SNAPSHOT</version>
-  <name>pulsed</name>
+  <name>pulsefs</name>
   <url>http://maven.apache.org</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -39,7 +39,7 @@
             </manifest>
           </archive>
           <outputDirectory>./bin</outputDirectory>
-          <finalName>pulsed</finalName>
+          <finalName>pulsefs</finalName>
           <descriptorRefs>
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
@@ -88,7 +88,7 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.2</version>
         <configuration>
-          <mainClass>com.github.zk1931.pulsed.Main</mainClass>
+          <mainClass>com.github.zk1931.pulsefs.Main</mainClass>
         </configuration>
       </plugin>
       <plugin>

@@ -30,7 +30,7 @@ class TestSingleServer(object):
         assert len(body["checksum"]) == 8
         int(body["checksum"], 16)
         assert res.headers["checksum"] == body["checksum"]
-        assert body["children"][0]["path"] == "/pulsed"
+        assert body["children"][0]["path"] == "/pulsefs"
 
     def test_encoded_url(self):
         directory = "/" + str(uuid.uuid4())
@@ -367,22 +367,22 @@ class TestSingleServer(object):
         # make sure /foo gets deleted since it has no child anymore.
         requests.get(self.baseurl + directory + "/foo").status_code = 404
 
-    def test_pulsed_servers(self):
-        directory = "/pulsed/servers"
+    def test_pulsefs_servers(self):
+        directory = "/pulsefs/servers"
         res = requests.get(self.baseurl + directory)
-        # make sure directory /pulsed/servers exists
+        # make sure directory /pulsefs/servers exists
         assert res.status_code == 200
         body = json.loads(res.content)
-        assert body["path"] == "/pulsed/servers"
+        assert body["path"] == "/pulsefs/servers"
         assert body["children"][0]["path"] == directory + "/localhost:5000"
 
         res = requests.put(self.baseurl + directory + "/file")
-        # can't create file under /pulsed/servers
+        # can't create file under /pulsefs/servers
         assert res.status_code == 403
         assert res.reason == "Forbidden"
 
         res = requests.delete(self.baseurl + directory + "/localhost:5000")
-        # can't delete file under /pulsed/servers
+        # can't delete file under /pulsefs/servers
         assert res.status_code == 403
         assert res.reason == "Forbidden"
 
@@ -423,19 +423,19 @@ class TestSingleServer(object):
         assert new_checksum == checksum
 
     def test_create_session(self):
-        directory = "/pulsed/sessions"
+        directory = "/pulsefs/sessions"
         res = requests.post(self.baseurl + directory)
         assert res.status_code == 201
         assert res.headers["Location"] == directory + "/0000000000000000"
 
-        # try to create file under /pulsed/sessions directory, pulsed will
+        # try to create file under /pulsefs/sessions directory, pulsefs will
         # treat this request as update session so it wil reply 404 since
         # there's no such session exists.
         res = requests.put(self.baseurl + directory + "/file")
         assert res.status_code == 404
 
     def test_session_expires(self):
-        directory = "/pulsed/sessions"
+        directory = "/pulsefs/sessions"
         res = requests.post(self.baseurl + directory)
         assert res.status_code == 201
         location = res.headers["Location"]
@@ -460,7 +460,7 @@ class TestSingleServer(object):
         assert res.status_code == 412
 
     def test_renew_session(self):
-        directory = "/pulsed/sessions"
+        directory = "/pulsefs/sessions"
         res = requests.post(self.baseurl + directory)
         assert res.status_code == 201
         location = res.headers["Location"]
