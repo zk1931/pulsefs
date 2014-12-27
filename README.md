@@ -1,7 +1,7 @@
-pulsed [![Build Status](https://travis-ci.org/zk1931/pulsed.svg?branch=master)](https://travis-ci.org/zk1931/pulsed)
+PulseFS [![Build Status](https://travis-ci.org/zk1931/pulsefs.svg?branch=master)](https://travis-ci.org/zk1931/pulsefs)
 =====
 
-`pulsed` is an HTTP-based replicated filestore for distributed coordination.
+`PulseFS` is an HTTP-based replicated filestore for distributed coordination.
 Its features include:
 
 - **Sequentially consistent** All the replicas see updates in the same order.
@@ -15,7 +15,7 @@ Its features include:
 Getting Started
 ---------------
 
-- [API specifications](https://github.com/zk1931/pulsed/blob/master/SPEC.md)
+- [API specifications](https://github.com/zk1931/pulsefs/blob/master/SPEC.md)
   describes the API in details.
 
 Compilation
@@ -27,6 +27,6 @@ Usage
 -----
 To start a cluster, run:
 
-    ./bin/pulsed -port 8080 -addr localhost:5000
-    ./bin/pulsed -port 8081 -addr localhost:5001 -join localhost:5000
-    ./bin/pulsed -port 8082 -addr localhost:5002 -join localhost:5000
+    ./bin/pulsefs -port 8080 -addr localhost:5000
+    ./bin/pulsefs -port 8081 -addr localhost:5001 -join localhost:5000
+    ./bin/pulsefs -port 8082 -addr localhost:5002 -join localhost:5000

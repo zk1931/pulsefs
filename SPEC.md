@@ -1,7 +1,7 @@
 spec draft
 ==========
 
-Pulsed has two types of entities, directories and files. Directories can contain
+PulseFS has two types of entities, directories and files. Directories can contain
 other directories and files, and files contain data, but it cannot contain other
 directories or files.
 
@@ -12,7 +12,7 @@ are allowed to be empty. Transient directories automatically get deleted when
 they become empty.
 
 There are two kinds of files, regular and ephemeral. Regular files remains in
-pulsed until they explicitly get deleted by the user. Each ephemeral file is
+pulsefs until they explicitly get deleted by the user. Each ephemeral file is
 associated with a session, and it gets deleted automatically when the session
 expires.
 
@@ -33,7 +33,7 @@ A special version -1 indicates that a file or a directory does not exist. This
 special version is used for file/directory creation as well as watching for file
 /directory creation/deletion as described later.
 
-A special directory `/pulsed` is reserved for use by pulsed.
+A special directory `/pulsefs` is reserved for use by pulsefs.
 
 creating a new regular file
 ---------------------------
@@ -277,11 +277,11 @@ if the file/directory does not exist.
 creating a session
 ------------------
 
-    POST /pulsed/session HTTP/1.1
+    POST /pulsefs/session HTTP/1.1
 
     HTTP/1.1 200 OK
     content-length: 0
-    location: /pulsed/session/0000000000000000
+    location: /pulsefs/session/0000000000000000
     timeout-sec: 10
 
 creating an ephemeral file
@@ -313,11 +313,11 @@ You can also create sequential ephemeral files:
 sending a pulse (or a heartbeat) to a session
 ------------------
 
-Send a pulse to renew a session. Pulsed expires a session if it doesn't receive
+Send a pulse to renew a session. PulseFS expires a session if it doesn't receive
 a pulse within a timeout specified in timeout-sec header in the session creation
 response.
 
-    PUT /pulsed/session/0000000000000000 HTTP/1.1
+    PUT /pulsefs/session/0000000000000000 HTTP/1.1
     content-length: 0
 
     HTTP/1.1 200 OK
@@ -328,7 +328,7 @@ TODO: pulse response could contain some useful info about the session.
 deleting a session
 ------------------
 
-    DELETE /pulsed/session/0000000000000000 HTTP/1.1
+    DELETE /pulsefs/session/0000000000000000 HTTP/1.1
 
     HTTP/1.1 200 OK
     content-length: 0
@@ -336,7 +336,7 @@ deleting a session
 inspecting cluster servers
 --------------------------
 
-    GET /pulsed/servers HTTP/1.1
+    GET /pulsefs/servers HTTP/1.1
 
     HTTP/1.1 200 OK
     Date: Wed, 10 Dec 2014 05:24:37 GMT
@@ -347,37 +347,37 @@ inspecting cluster servers
 
     {
         "version": 5,
-        "path": "/pulsed/servers",
+        "path": "/pulsefs/servers",
         "type": "dir",
         "checksum": "278C0B7E",
         "children": [
             {
                 "version": 0,
-                "path": "/pulsed/servers/localhost:8080",
+                "path": "/pulsefs/servers/localhost:8080",
                 "type": "file",
                 "checksum": "CF200A90"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8081",
+              "path": "/pulsefs/servers/localhost:8081",
               "type": "file",
               "checksum": "CF210A91"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8082",
+              "path": "/pulsefs/servers/localhost:8082",
               "type": "file",
               "checksum": "FC7C0B8F"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8083",
+              "path": "/pulsefs/servers/localhost:8083",
               "type": "file",
               "checksum": "9A940961"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8084",
+              "path": "/pulsefs/servers/localhost:8084",
               "type": "file",
               "checksum": "9A950962"
             }
@@ -387,7 +387,7 @@ inspecting cluster servers
 watching changes of cluster servers
 -----------------------------------
 
-    GET /pulsed/servers?wait=1 HTTP/1.1
+    GET /pulsefs/servers?wait=1 HTTP/1.1
 
     HTTP/1.1 200 OK
     Date: Wed, 10 Dec 2014 05:24:37 GMT
@@ -398,37 +398,37 @@ watching changes of cluster servers
 
     {
         "version": 5,
-        "path": "/pulsed/servers",
+        "path": "/pulsefs/servers",
         "type": "dir",
         "checksum": "278C0B7E",
         "children": [
             {
                 "version": 0,
-                "path": "/pulsed/servers/localhost:8080",
+                "path": "/pulsefs/servers/localhost:8080",
                 "type": "file",
                 "checksum": "CF200A90"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8081",
+              "path": "/pulsefs/servers/localhost:8081",
               "type": "file",
               "checksum": "CF210A91"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8082",
+              "path": "/pulsefs/servers/localhost:8082",
               "type": "file",
               "checksum": "FC7C0B8F"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8083",
+              "path": "/pulsefs/servers/localhost:8083",
               "type": "file",
               "checksum": "9A940961"
             },
             {
               "version": 0,
-              "path": "/pulsed/servers/localhost:8084",
+              "path": "/pulsefs/servers/localhost:8084",
               "type": "file",
               "checksum": "9A950962"
             }

@@ -14,7 +14,7 @@ def get_executable():
     path = os.path.realpath(__file__)
     for i in range(0, 4):
         path = os.path.dirname(path)
-    return os.path.join(path, "bin", "pulsed")
+    return os.path.join(path, "bin", "pulsefs")
 
 
 @pytest.fixture(scope="class")
@@ -64,15 +64,15 @@ def multiple_servers(request):
 
     for i in range(0, 10):
         try:
-            res = requests.get(server1 + "/pulsed/servers")
+            res = requests.get(server1 + "/pulsefs/servers")
             body = json.loads(res.content)
             if len(body["children"]) != 3:
                 raise "Not all servers are up"
-            res = requests.get(server2 + "/pulsed/servers")
+            res = requests.get(server2 + "/pulsefs/servers")
             body = json.loads(res.content)
             if len(body["children"]) != 3:
                 raise "Not all servers are up"
-            res = requests.get(server3 + "/pulsed/servers")
+            res = requests.get(server3 + "/pulsefs/servers")
             body = json.loads(res.content)
             if len(body["children"]) != 3:
                 raise "Not all servers are up"

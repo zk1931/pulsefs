@@ -15,7 +15,7 @@
     <appender-ref ref="ZAB_STDOUT" />
   </logger>
 
-  <logger name="com.github.zk1931.pulsed" level="debug" additivity="false">
+  <logger name="com.github.zk1931.pulsefs" level="debug" additivity="false">
     <appender-ref ref="STDOUT" />
   </logger>
 

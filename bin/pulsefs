@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# get the project root directory.
+ROOT="$( cd "$( dirname "$0" )/.." && pwd )"
+exec java -cp $ROOT/bin/pulsefs-jar-with-dependencies.jar com.github.zk1931.pulsefs.Main "$@"
