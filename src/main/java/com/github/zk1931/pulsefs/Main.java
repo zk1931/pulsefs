@@ -146,7 +146,7 @@ public final class Main {
     pulsefs.setContextPath(PulseFSConfig.PULSEFS_ROOT);
     pulsefs.setAllowNullPathInfo(true);
     pulsefs.addServlet(new ServletHolder(new PulseFSHandler(fs)), "/*");
-    pulsefs.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
+    pulsefs.addFilter(filters, "/*", EnumSet.of(DispatcherType.REQUEST));
 
     ServletContextHandler servers =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -154,13 +154,13 @@ public final class Main {
     // Redirects /pulsefs/servers to /pulsefs/servers/
     servers.setAllowNullPathInfo(true);
     servers.addServlet(new ServletHolder(new PulseFSServersHandler(fs)), "/*");
-    servers.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
+    servers.addFilter(filters, "/*", EnumSet.of(DispatcherType.REQUEST));
 
     ServletContextHandler tree =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
     tree.setContextPath("/");
     tree.addServlet(new ServletHolder(new TreeHandler(fs)), "/*");
-    tree.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
+    tree.addFilter(filters, "/*", EnumSet.of(DispatcherType.REQUEST));
 
     ServletContextHandler sessions =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -169,7 +169,7 @@ public final class Main {
     sessions.setAllowNullPathInfo(true);
     sessions.addServlet(new ServletHolder(new PulseFSSessionsHandler(fs)),
                                           "/*");
-    sessions.addFilter(filters, "/", EnumSet.of(DispatcherType.REQUEST));
+    sessions.addFilter(filters, "/*", EnumSet.of(DispatcherType.REQUEST));
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     contexts.setHandlers(new Handler[] {sessions, servers, pulsefs, tree});

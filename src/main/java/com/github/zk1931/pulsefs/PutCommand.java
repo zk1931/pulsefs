@@ -45,14 +45,23 @@ public class PutCommand extends Command {
   final boolean recursive;
   final long version;
   final boolean isTransient;
+  final boolean ephemeral;
+  final long sessionID;
 
-  public PutCommand(String path, byte[] data, boolean recursive, long version,
-                    boolean isTransient) {
+  public PutCommand(String path,
+                    byte[] data,
+                    boolean recursive,
+                    long version,
+                    boolean isTransient,
+                    boolean ephemeral,
+                    long sessionID) {
     this.path = path;
     this.data = data.clone();
     this.recursive = recursive;
     this.version = version;
     this.isTransient = isTransient;
+    this.ephemeral = ephemeral;
+    this.sessionID = sessionID;
   }
 
   Node execute(PulseFS pulsefs)
@@ -66,8 +75,17 @@ public class PutCommand extends Command {
         // If the node exists, treat the command as request of update.
         return tree.setData(path, data, -1);
       } else {
-        // Otherwise treat the command as request of creation.
-        return tree.createFile(path, data, recursive, isTransient);
+        if (ephemeral) {
+          // Creates ephemeral file.
+          return tree.createSessionFile(path,
+                                        data,
+                                        sessionID,
+                                        recursive,
+                                        isTransient);
+        } else {
+          // Otherwise treat the command as request of creation.
+          return tree.createFile(path, data, recursive, isTransient);
+        }
       }
     } else if (version == -1) {
       // If the version is -1 then we can only do creation.
