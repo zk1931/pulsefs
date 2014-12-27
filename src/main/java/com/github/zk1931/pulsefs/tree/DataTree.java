@@ -24,6 +24,9 @@ import static com.github.zk1931.pulsefs.tree.PathUtils.trimRoot;
 import static com.github.zk1931.pulsefs.tree.PathUtils.ROOT_PATH;
 import static com.github.zk1931.pulsefs.tree.PathUtils.SEP;
 import static com.github.zk1931.pulsefs.tree.PathUtils.validatePath;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ public class DataTree {
   public DirNode root = null;
   private DirNode stagingRoot = null;
   private final List<Node> changedNodes = new LinkedList<Node>();
+  private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
   WatchManager watchManager = new WatchManager();
   SessionFileManager sessionManager = new SessionFileManager();
 
@@ -60,17 +64,27 @@ public class DataTree {
    * in staging area will be visible.
    */
   public void commitStagingChanges() {
-    this.root = this.stagingRoot;
-    for (Node node : changedNodes) {
-      if (node instanceof SessionFileNode) {
-        SessionFileNode sn = (SessionFileNode)node;
-        if (node.version == 0) {
-          this.sessionManager.addFileToSession(sn.sessionID, sn.fullPath);
-        } else if (node.version == -1) {
-          this.sessionManager.removeFileFromSession(sn.sessionID, sn.fullPath);
+    Lock wLock = getWriteLock();
+    try {
+      // Grabs the write lock before making changes visible.
+      wLock.lock();
+      this.root = this.stagingRoot;
+    } finally {
+      wLock.unlock();
+    }
+    synchronized(watchManager) {
+      for (Node node : changedNodes) {
+        if (node instanceof SessionFileNode) {
+          SessionFileNode sn = (SessionFileNode)node;
+          if (node.version == 0) {
+            this.sessionManager.addFileToSession(sn.sessionID, sn.fullPath);
+          } else if (node.version == -1) {
+            this.sessionManager.removeFileFromSession(sn.sessionID,
+                                                      sn.fullPath);
+          }
         }
+        this.watchManager.triggerAndRemoveWatches(node);
       }
-      this.watchManager.triggerAndRemoveWatches(node);
     }
     this.changedNodes.clear();
   }
@@ -433,7 +447,33 @@ public class DataTree {
    * @param the watch.
    */
   public void addWatch(Watch watch) {
-    this.watchManager.addWatch(watch);
+    synchronized(watchManager) {
+      this.watchManager.addWatch(watch);
+    }
+  }
+
+  /**
+   * Gets the read lock of DataTree. Although DataTree implementation allows
+   * lock-free access with multiple readers and one writer, but returning a
+   * read lock is helpful in some cases (e.g. read the state and then decide
+   * whether to add watch or not depends the state.)
+   *
+   * @return the read lock.
+   */
+  public Lock getReadLock() {
+    return this.rwLock.readLock();
+  }
+
+  /**
+   * Gets the write lock of DataTree. Although DataTree implementation allows
+   * lock-free access with multiple readers and one writer, but returning a
+   * write lock is helpful to support multiple writers. Whenever DataTree
+   * changes its state, it will grab write lock internally.
+   *
+   * @return the write lock.
+   */
+  public Lock getWriteLock() {
+    return this.rwLock.writeLock();
   }
 
   DirNode createNode(DirNode curNode,
@@ -653,14 +693,6 @@ public class DataTree {
       sum += size(node);
     }
     return sum;
-  }
-
-  public void triggerWatches(List<Node> changes) {
-    synchronized(this) {
-      for (Node node: changes) {
-        this.watchManager.triggerAndRemoveWatches(node);
-      }
-    }
   }
 
   /**
