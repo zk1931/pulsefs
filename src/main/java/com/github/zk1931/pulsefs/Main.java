@@ -79,17 +79,21 @@ public final class Main {
                                .withDescription("print out usages.")
                                .create("h");
 
+    Option timeout = OptionBuilder.withArgName("timeout")
+                                  .hasArg(true)
+                                  .withDescription("session timeout(seconds)")
+                                  .create("timeout");
+
     options.addOption(port)
            .addOption(addr)
            .addOption(join)
            .addOption(dir)
+           .addOption(timeout)
            .addOption(help);
 
     CommandLineParser parser = new BasicParser();
     CommandLine cmd;
-    String usage = "./bin/pulsefs \"-port port -addr addr [-join peer] " +
-      "[-dir data_dir]\" or \"-port port -dir data_dir\"";
-
+    String usage = "./bin/pulsefs -port port [Options]";
     try {
       cmd = parser.parse(options, args);
       if (cmd.hasOption("h")) {
@@ -103,7 +107,26 @@ public final class Main {
       return;
     }
 
-    Server server = new Server(Integer.parseInt(cmd.getOptionValue("port")));
+    PulseFSConfig config = new PulseFSConfig();
+
+    if (cmd.hasOption("addr")) {
+      config.setServerId(cmd.getOptionValue("addr"));
+    }
+    if (cmd.hasOption("join")) {
+      config.setJoinPeer(cmd.getOptionValue("join"));
+    }
+    if (cmd.hasOption("dir")) {
+      config.setLogDir(cmd.getOptionValue("dir"));
+    }
+    if (cmd.hasOption("timeout")) {
+      String sessionTimeout = cmd.getOptionValue("timeout");
+      config.setSessionTimeout(Integer.parseInt(sessionTimeout));
+    }
+    if (cmd.hasOption("port")) {
+      config.setPort(Integer.parseInt(cmd.getOptionValue("port")));
+    }
+
+    Server server = new Server(config.getPort());
     // Suppress "Server" header in HTTP response.
     for(Connector y : server.getConnectors()) {
       for(ConnectionFactory x  : y.getConnectionFactories()) {
@@ -114,10 +137,7 @@ public final class Main {
       }
     }
 
-    PulseFS fs = new PulseFS(cmd.getOptionValue("addr"),
-                             cmd.getOptionValue("join"),
-                             cmd.getOptionValue("dir"));
-
+    PulseFS fs = new PulseFS(config);
     SessionFilter sessionFilter = new SessionFilter(fs);
     FilterHolder filters = new FilterHolder(sessionFilter);
 
