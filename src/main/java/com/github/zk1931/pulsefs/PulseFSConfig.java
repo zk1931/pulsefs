@@ -24,6 +24,7 @@ public final class PulseFSConfig {
   public static final String PULSEFS_ROOT = "/pulsefs";
   public static final String PULSEFS_SERVERS_PATH = PULSEFS_ROOT + "/servers";
   public static final String PULSEFS_SESSIONS_PATH = PULSEFS_ROOT + "/sessions";
+  public static final String PULSEFS_SNAPSHOT_PATH = PULSEFS_ROOT + "/snapshot";
 
   private String serverId = null;
   private String joinPeer = null;

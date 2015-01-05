@@ -17,10 +17,15 @@
 
 package com.github.zk1931.pulsefs.tree;
 
+import java.io.Serializable;
+
 /**
  * Node of the tree.
  */
-public abstract class Node {
+public abstract class Node implements Serializable {
+
+  private static final long serialVersionUID = 0L;
+
   /**
    * The full path of the node.
    */

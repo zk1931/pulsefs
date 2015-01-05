@@ -26,10 +26,13 @@ import com.github.zk1931.jzab.ZabException.NotBroadcastingPhase;
 import com.github.zk1931.jzab.ZabException.TooManyPendingRequests;
 import com.github.zk1931.jzab.Zxid;
 import com.github.zk1931.pulsefs.tree.DataTree;
+import com.github.zk1931.pulsefs.tree.DirNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Callable;
@@ -37,6 +40,7 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.Lock;
 import java.util.Set;
 import javax.servlet.AsyncContext;
 
@@ -162,12 +166,18 @@ public final class PulseFS {
     return this.isBroadcasting;
   }
 
+  public void takeSnapshot(Object ctx)
+      throws NotBroadcastingPhase, TooManyPendingRequests {
+    this.zab.takeSnapshot(ctx);
+  }
+
   /**
    * State machine of PulseFS.
    */
   class PulseFSStateMachine implements StateMachine {
 
-    final DataTree tree = new DataTree();
+    DataTree tree = new DataTree();
+    Zxid lastAppliedZxid = new Zxid(0, -1);
 
     PulseFSStateMachine() {
       try {
@@ -189,15 +199,38 @@ public final class PulseFS {
     @Override
     public void deliver(Zxid zxid, ByteBuffer stateUpdate, String clientId,
                         Object ctx) {
+      if (zxid.compareTo(lastAppliedZxid) <= 0) {
+        // Means the state machine just recovered from snapshot and now it's
+        // recovering from log, this transaction in log has already been
+        // applied in snapshot so we ignore it.
+        return;
+      }
       Command command = Serializer.deserialize(stateUpdate);
-      if (ctx != null) {
-        command.executeAndReply(PulseFS.this, ctx);
-      } else {
-        try {
-          command.execute(PulseFS.this);
-        } catch (DataTree.TreeException ex) {
-          LOG.trace("exception ", ex);
+      Lock wlock = tree.getWriteLock();
+      try {
+        // The transaction was supposed to be idempotent since the snapshot of
+        // Jzab is fuzzy. However, the snapshot of DataTree is supposed to be
+        // always consistent thus we can get rid of "idempotency" requirement.
+        // We just save the zxid of last applied transaction to the root node
+        // in snapshot file and ignore all transaction with zxid smaller than
+        // the zxid in snapshot file after recovery.
+        // However, this requires updating the root node and "last applied
+        // zxid" in an atomic way. And the updating(deliver) and accessing(save)
+        // happen in different threads so we need to introduce use RW lock to
+        // make the updating atomically.
+        wlock.lock();
+        if (ctx != null) {
+          command.executeAndReply(PulseFS.this, ctx);
+        } else {
+          try {
+            command.execute(PulseFS.this);
+          } catch (DataTree.TreeException ex) {
+            LOG.trace("exception ", ex);
+          }
         }
+      } finally {
+        lastAppliedZxid = zxid;
+        wlock.unlock();
       }
     }
 
@@ -215,16 +248,57 @@ public final class PulseFS {
 
     @Override
     public void save(OutputStream os) {
-      throw new UnsupportedOperationException();
+      Lock rlock = tree.getReadLock();
+      Zxid snapZxid;
+      DirNode snapRoot;
+      try {
+        rlock.lock();
+        // The transaction was supposed to be idempotent since the snapshot of
+        // Jzab is fuzzy. However, the snapshot of DataTree is supposed to be
+        // always consistent thus we can get rid of "idempotency" requirement.
+        // We just save the zxid of last applied transaction to the root node
+        // in snapshot file and ignore all transaction with zxid smaller than
+        // the zxid in snapshot file after recovery.
+        // However, this requires updating the root node and "last applied
+        // zxid" in an atomic way. And the updating(deliver) and accessing(save)
+        // happen in different threads so we need to introduce use RW lock to
+        // make the updating atomically.
+        snapZxid = lastAppliedZxid;
+        snapRoot = tree.getRoot();
+      } finally {
+        rlock.unlock();
+      }
+      LOG.debug("Taking snapshot with last applied zxid {}", snapZxid);
+      try (ObjectOutputStream oos = new ObjectOutputStream(os)) {
+        oos.writeLong(snapZxid.getEpoch());
+        oos.writeLong(snapZxid.getXid());
+        oos.writeObject(snapRoot);
+      } catch (IOException ex) {
+        LOG.error("IOException while taking snapshot.", ex);
+      }
     }
 
     @Override
     public void restore(InputStream is) {
-      throw new UnsupportedOperationException();
+      try (ObjectInputStream ois = new ObjectInputStream(is)) {
+        long epoch, xid;
+        epoch = ois.readLong();
+        xid = ois.readLong();
+        Zxid snapZxid = new Zxid(epoch, xid);
+        DirNode snapRoot = (DirNode)ois.readObject();
+        LOG.debug("Restoring from snapshot(last applied zxid {})", snapZxid);
+        tree = new DataTree(snapRoot);
+        lastAppliedZxid = snapZxid;
+      } catch (IOException | ClassNotFoundException ex) {
+        LOG.debug("Exception while restoreing from snapshot.", ex);
+      }
     }
 
     @Override
-    public void snapshotDone(String fileName, Object ctx) {}
+    public void snapshotDone(String fileName, Object ctx) {
+      SnapshotCommand cmd = (SnapshotCommand)ctx;
+      cmd.executeAndReply(PulseFS.this, null);
+    }
 
     @Override
     public void recovering(PendingRequests pendingRequests) {
