@@ -171,8 +171,20 @@ public final class Main {
                                           "/*");
     sessions.addFilter(filters, "/*", EnumSet.of(DispatcherType.REQUEST));
 
+    ServletContextHandler snapshot =
+        new ServletContextHandler(ServletContextHandler.SESSIONS);
+    snapshot.setContextPath(PulseFSConfig.PULSEFS_SNAPSHOT_PATH);
+    snapshot.setAllowNullPathInfo(true);
+    snapshot.addServlet(new ServletHolder(new PulseFSSnapshotHandler(fs)),
+                                          "/");
+    snapshot.addFilter(filters, "/*", EnumSet.of(DispatcherType.REQUEST));
+
     ContextHandlerCollection contexts = new ContextHandlerCollection();
-    contexts.setHandlers(new Handler[] {sessions, servers, pulsefs, tree});
+    contexts.setHandlers(new Handler[] {snapshot,
+                                        sessions,
+                                        servers,
+                                        pulsefs,
+                                        tree});
     server.setHandler(contexts);
     server.start();
     server.join();

@@ -60,6 +60,16 @@ public class DataTree {
   }
 
   /**
+   * Constructs a DataTreew with a given root node.
+   *
+   * @param root the initial root node of the tree.
+   */
+  public DataTree(DirNode root) {
+    this.root = root;
+    this.stagingRoot = this.root;
+  }
+
+  /**
    * Commits all the changes in staging area, once committed, all the changes
    * in staging area will be visible.
    */
