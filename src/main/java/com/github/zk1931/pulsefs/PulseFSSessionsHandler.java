@@ -65,10 +65,10 @@ public class PulseFSSessionsHandler extends PulseFSHandler {
         // management of the session.
         LOG.debug("Trying to declare the ownership of session {}", sessionID);
         AsyncContext context = getContext(request, response);
-        Command declare = new ManageSessionCommand(sessionID,
-                                                   fs.getServerId());
+        Command manage = new ManageSessionCommand(sessionID,
+                                                  fs.getServerId());
         try {
-          this.fs.proposeStateChange(declare, context);
+          this.fs.proposeStateChange(manage, context);
         } catch (ZabException ex) {
           Utils.replyServiceUnavailable(response, context);
         }

@@ -26,6 +26,9 @@ import com.github.zk1931.jzab.ZabException.NotBroadcastingPhase;
 import com.github.zk1931.jzab.ZabException.TooManyPendingRequests;
 import com.github.zk1931.jzab.Zxid;
 import com.github.zk1931.pulsefs.tree.DataTree;
+import com.github.zk1931.pulsefs.tree.DirNode;
+import com.github.zk1931.pulsefs.tree.Node;
+import com.github.zk1931.pulsefs.tree.SessionFileNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.InputStream;
@@ -240,14 +243,10 @@ public final class PulseFS {
       leader = serverId;
       activeMembers = activePeers;
       clusterMembers = clusterConfig;
-      Command cmd =
-        new ClusterChangeCommand(clusterMembers, activeMembers, serverId);
-      try {
-        ByteBuffer bb = Serializer.serialize(cmd);
-        zab.send(bb, null);
-      } catch (IOException | ZabException ex) {
-        LOG.error("Exception : ", ex);
-      }
+      // Writes the new configuration to DataTree.
+      writeConfigToTree();
+      // The leader also needs the take the ownership of all the sessions.
+      manageAllSessions();
       isBroadcasting = true;
     }
 
@@ -258,6 +257,41 @@ public final class PulseFS {
       leader = leaderId;
       clusterMembers = clusterConfig;
       isBroadcasting = true;
+    }
+
+    private void writeConfigToTree() {
+      Command clusterCmd = new ClusterChangeCommand(clusterMembers,
+                                                    activeMembers,
+                                                    serverId);
+      try {
+        ByteBuffer bb = Serializer.serialize(clusterCmd);
+        zab.send(bb, null);
+      } catch (IOException | ZabException ex) {
+        LOG.error("Exception : ", ex);
+      }
+    }
+
+    private void manageAllSessions() {
+      Node sessionDir;
+      try {
+        sessionDir = tree.getNode(config.PULSEFS_SESSIONS_PATH);
+      } catch (DataTree.TreeException ex) {
+        LOG.error("Caught exception while accessing sessions", ex);
+        throw new RuntimeException(ex);
+      }
+      if (!(sessionDir instanceof DirNode)) {
+        throw new RuntimeException("Wrong node type.");
+      }
+      try {
+        for (Node node : ((DirNode)sessionDir).children.values()) {
+          long sessionID = ((SessionFileNode)node).sessionID;
+          Command manage = new ManageSessionCommand(sessionID, serverId);
+          ByteBuffer bb = Serializer.serialize(manage);
+          zab.send(bb, null);
+        }
+      } catch (IOException | ZabException ex) {
+        LOG.error("Exception : ", ex);
+      }
     }
   }
 }
